@@ -2,10 +2,9 @@ classdef TaskAltitude < Task
     properties
         desired_altitude;
         equality;
-        e;
     end
 
-    
+
     methods
 
         function obj = TaskAltitude(desired_altitude,mode)
@@ -20,6 +19,10 @@ classdef TaskAltitude < Task
                 otherwise
                     obj.equality = false;
             end
+
+            obj.xdotbar = 0;
+            obj.J = 0;
+            obj.A = 0;
         end
 
         function updateReference(obj, robot)
@@ -29,23 +32,24 @@ classdef TaskAltitude < Task
             
             ang =  skew(zR)*[0;0;1];
 
+            % ref = [1;0;0];                       
+            % sign_theta = sign(dot(ref, ang));
+
             theta_val = atan2(norm(ang), dot(wRv(:,3),[0;0;1]));
 
-            if(theta_val<0)
-                theta_val = 2*pi+theta_val;
-            end
+            % if(theta_val<0)
+            %     theta_val = 2*pi+theta_val;
+            % end
             
             if isempty(robot.altitude)
-                warning('robot.altitude vuoto! Uso valore di default e = 0.0');
-                obj.e = 0;
-            else
-                obj.e = robot.altitude * cos(theta_val) - obj.desired_altitude;
+                warning('robot.altitude vuoto! Uso valore di default 2.0');
+                robot.altitude = 2.0;
             end
-            
+            e = robot.altitude * cos(theta_val) - obj.desired_altitude;
             
             % RIVEDI PER PARAMETRO 0.5
 
-            obj.xdotbar = 0.2 * (0.0 - obj.e);
+            obj.xdotbar = 0.2 * (0.5 - e);
             obj.xdotbar = Saturate(obj.xdotbar, 0.2);
         end
         function updateJacobian(obj, robot)
@@ -60,7 +64,23 @@ classdef TaskAltitude < Task
                 th = 0;
                 delta = 0.5;
     
-                obj.A = DecreasingBellShapedFunction(th,th+delta,0,1,obj.e);
+                wRv = robot.wTv(1:3,1:3);
+                zR = wRv(:,3);
+                
+                ang =  skew(zR)*[0;0;1];
+    
+                % ref = [1;0;0];                       
+                % sign_theta = sign(dot(ref, ang));
+    
+                theta_val = atan2(norm(ang), dot(wRv(:,3),[0;0;1]));
+    
+                if(theta_val<0)
+                    theta_val = 2*pi+theta_val;
+                end
+    
+                e = robot.altitude * cos(theta_val) - obj.desired_altitude;
+    
+                obj.A = DecreasingBellShapedFunction(th,th+delta,0,1,e);
             end   
         end
     end

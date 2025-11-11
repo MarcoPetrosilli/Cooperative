@@ -1,18 +1,26 @@
 classdef ActionManager < handle
     properties
         actions = {}      % cell array of actions (each action = stack of tasks)
+        action_names = {}
         currentAction = 1 % index of currently active action
+        unified_action = {}
     end
 
     methods
-        function addAction(obj, taskStack)
+        function addAction(obj, taskStack, action_name)
             % taskStack: cell array of tasks that define an action
             obj.actions{end+1} = taskStack;
+            obj.action_names{end+1} = action_name;
+        end
+
+        function addUnifiedAction(obj, unified_set)
+            obj.unified_action = unified_set;
         end
 
         function [v_nu, qdot] = computeICAT(obj, robot)
             % Get current action
-            tasks = obj.actions{obj.currentAction};
+            % tasks = obj.actions{obj.currentAction};
+            tasks = obj.unified_action;
 
             % 1. Update references, Jacobians, activations
             for i = 1:length(tasks)
