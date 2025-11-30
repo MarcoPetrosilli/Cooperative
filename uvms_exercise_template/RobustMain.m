@@ -5,6 +5,8 @@ addpath('./icat');
 addpath('./robust_robot');
 clc; clear; close all;
 
+% theta = [];
+
 % Simulation parameters
 dt       = 0.005;
 endTime  = 50;
@@ -15,31 +17,35 @@ sim = UvmsSim(dt, robotModel, endTime);
 unity = UnityInterface("127.0.0.1");
 
 % Define tasks
-%task_vehicle = TaskVehicle();  
+task_attitude = TaskAttitude();  
 task_to_altitude = TaskAltitude(0.5,"to_altitude");
 task_safe_altitude = TaskAltitude(2.0,"safe_mode");
 task_tool    = TaskTool();
 task_distance    = TaskDistance();
 task_alignment    = TaskAlignment();
+task_mantainxy = TaskMantainxy();
 
 
-safe_set = {task_safe_altitude task_alignment task_distance};
-landing_set = {task_alignment task_distance task_to_altitude};
+safe_set = {task_safe_altitude task_alignment task_distance task_attitude};
+landing_set = {task_alignment task_mantainxy task_to_altitude};
 
-unified_set = {task_alignment task_to_altitude};
+
+unified_set = {task_safe_altitude task_alignment task_distance task_attitude};
 
 % Define actions and add to ActionManager
 actionManager = ActionManager();
 
 actionManager.addAction(safe_set,"safe_navigation");  % action 1
-actionManager.addAction(landing_set,"landing");  % action 2
-
+%actionManager.addAction(landing_set,"landing");  % action 2
 actionManager.addUnifiedAction(unified_set);
+
+actionManager.setCurrentAction("safe_navigation");
+
 
 % Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
-w_vehicle_goal_position = [10.5, 37.5, -40]';
+w_vehicle_goal_position = [50, -12.5, -33]';
 w_vehicle_goal_orientation = [0, 0, 0];
 
 % Set goals in the robot model

@@ -1,6 +1,6 @@
 classdef TaskTool < Task   
     properties
-
+        id = "tool";
     end
 
 

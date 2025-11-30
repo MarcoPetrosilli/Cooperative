@@ -123,8 +123,8 @@ classdef ActionManager < handle
                 prev_tasks = {};
             end
 
-            inCurrent = ismember(string(tasks_id), string(current_tasks_id));
-            inPrev    = ismember(string(tasks_id), string(prev_tasks_id));
+            inCurrent = ismember(tasks_id, current_tasks_id);
+            inPrev    = ismember(tasks_id, prev_tasks_id);
 
             % update all tasks
             for i = 1:length(tasks)
@@ -136,7 +136,7 @@ classdef ActionManager < handle
                     % entering → fade in
                     task.updateActivation(robot);
                     task.A = task.A * alpha;
-                elseif ~inCurrent(i) && inPrev(i)
+                elseif ~inCurrent() && inPrev(i)
                     % leaving → fade out
                     task.updateActivation(robot);
                     task.A = task.A * (1 - alpha);

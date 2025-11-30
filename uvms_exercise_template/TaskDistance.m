@@ -1,6 +1,6 @@
 classdef TaskDistance < Task   
     properties
-
+        id = "distance";
     end
 
 

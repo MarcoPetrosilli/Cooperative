@@ -70,7 +70,8 @@ classdef UvmsModel < handle
 
             % Initialize default state
             obj.q      = [-0.0031 0 0.0128 -1.2460 0.0137 0.0853 -pi/2]';
-            obj.eta    = [10.5 35.5 -33 pi/3 pi/3 0]';
+            % obj.eta    = [48.5 11.5 -33 pi/3 pi/3 0]';
+            obj.eta    = [48.5 11.5 -33 pi/3 0 0]';
 
             % Default limits
             obj.jlmin  = [-2.9;-1.6;-2.9;-2.95;-2.9;-1.65;-2.8];

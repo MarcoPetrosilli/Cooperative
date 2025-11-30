@@ -1,6 +1,7 @@
 classdef TaskAlignment < Task   
     properties
         theta
+        id = "alignment";
     end
 
 
@@ -12,11 +13,8 @@ classdef TaskAlignment < Task
             zR = wRv(:,3);
             
             ang =  skew(zR)*[0;0;1];
-
-            % ref = [1;0;0];                       
-            % sign_theta = sign(dot(ref, ang));
             
-            obj.theta = atan2(norm(ang), dot(wRv(:,3),[0;0;1]));
+            obj.theta = atan2(norm(ang), dot(zR,[0;0;1]));
 
             if(obj.theta<0)
                 obj.theta = 2*pi+obj.theta;
@@ -33,13 +31,6 @@ classdef TaskAlignment < Task
 
 
         function updateJacobian(obj,robot)
-            % wRv = robot.wTv(1:3,1:3);
-            % ang =  skew(wRv(:,3))*[0;0;1];
-            % ang = ang / norm(ang);
-            % ang = wRv'*ang;
-            % 
-            % obj.J = ang'*[zeros(3,7) zeros(3,3),eye(3,3)];
-
             wRv = robot.wTv(1:3,1:3);
             ang =  skew(wRv(:,3))*[0;0;1];
             ang = ang / norm(ang);

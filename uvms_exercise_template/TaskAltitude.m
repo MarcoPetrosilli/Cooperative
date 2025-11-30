@@ -3,6 +3,7 @@ classdef TaskAltitude < Task
         desired_altitude;
         equality;
         e;
+        id;
     end
 
     
@@ -13,9 +14,11 @@ classdef TaskAltitude < Task
             switch mode
                 case "safe_mode"
                     obj.equality = false;
+                    obj.id = "distance_safe_mode";
 
                 case "to_altitude"
                     obj.equality = true;
+                    obj.id = "distance_to_altitude";
 
                 otherwise
                     obj.equality = false;
@@ -29,23 +32,19 @@ classdef TaskAltitude < Task
             
             ang =  skew(zR)*[0;0;1];
 
-            theta_val = atan2(norm(ang), dot(wRv(:,3),[0;0;1]));
+            theta_val = atan2(norm(ang), dot(zR,[0;0;1]));
 
             if(theta_val<0)
                 theta_val = 2*pi+theta_val;
             end
             
             if isempty(robot.altitude)
-                warning('robot.altitude vuoto! Uso valore di default e = 0.0');
                 obj.e = 0;
             else
                 obj.e = robot.altitude * cos(theta_val) - obj.desired_altitude;
             end
-            
-            
-            % RIVEDI PER PARAMETRO 0.5
 
-            obj.xdotbar = 0.2 * (0.0 - obj.e);
+            obj.xdotbar = -0.8 * obj.e;
             obj.xdotbar = Saturate(obj.xdotbar, 0.2);
         end
         function updateJacobian(obj, robot)
