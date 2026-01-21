@@ -105,6 +105,7 @@ classdef ActionManager < handle
             else
                 alpha = 1;
             end
+            %check discontinuità -> sostituisci con brll shape
 
             % current/previous task sets
             current_tasks = obj.actions{obj.currentAction};

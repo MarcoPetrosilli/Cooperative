@@ -42,6 +42,7 @@ classdef TaskAltitude < Task
                 obj.e = 0;
             else
                 obj.e = robot.altitude * cos(theta_val) - obj.desired_altitude;
+% Altitude è già proiettata
             end
 
             obj.xdotbar = -0.8 * obj.e;
@@ -64,3 +65,5 @@ classdef TaskAltitude < Task
         end
     end
 end
+
+% Sistema parametro th in update Reference

@@ -20,3 +20,5 @@ classdef TaskMantainxy < Task
         end
     end
 end
+
+%Integra in normale task position e disattiva z

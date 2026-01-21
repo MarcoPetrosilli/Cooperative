@@ -51,13 +51,15 @@ classdef panda_arm < handle
             obj.jlmax=[2.8973;1.7628;2.8973;-0.0698;2.8973;3.7525;2.8973];
 
             % FIXED END EFFECTOR
-            theta = -44.9949;% FIXED ANGLE BETWEEN EE AND TOOL 
+            theta = -44.9949;% FIXED ANGLE BETWEEN EE AND TOOL
+            theta = theta*pi/180
             tool_length = 0.2124;% FIXED DISTANCE BETWEEN EE AND TOOL
 
             % TO DO: Define trasnformation matrix from ee to tool, and
             % transformation from world frame to tool
-            obj.eTt = eye(4);
-            obj.wTt = obj.wTe;
+            obj.eTt = [cos(theta) -sin(theta) 0 0;sin(theta) cos(theta) 0 0;0 0 1 tool_length;0 0 0 1];
+                       
+            obj.wTt = obj.wTe*obj.eTt;
           
         end
 
@@ -78,7 +80,7 @@ classdef panda_arm < handle
 
             obj.bTe=getTransform(obj.robot_model.franka,[obj.q',0,0],'panda_link7');
             obj.wTe=obj.wTb*obj.bTe;
-            obj.wTt =obj.wTe;
+            obj.wTt =obj.wTe*obj.eTt;
             
         end
         function update_jacobian(obj)

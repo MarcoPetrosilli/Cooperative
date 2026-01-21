@@ -17,8 +17,9 @@ real_robot = false;
 
 %Initiliaze panda_arm() Class, specifying the base offset w.r.t World Frame
 arm1=panda_arm(model,eye(4));
+
 %TO DO: TRANSFORMATION MATRIX FROM WORLD FRAME TO RIGHT ARM BASE FRAME
-wTb2 =eye(4);
+wTb2 =[-1 0 0 1.06;0 -1 0 -0.01;0 0 1 0;0 0 0 1];
 arm2=panda_arm(model,wTb2);
 
 %Initialize Bimanual Simulator Class
@@ -26,13 +27,13 @@ bm_sim=bimanual_sim(dt,arm1,arm2,end_time);
 
 %Define Object Shape and origin Frame
 obj_length = 0.12;
-w_obj_pos = [0.5 0 0.59]';
+w_obj_pos = [0.5 0 0]';
 w_obj_ori = rotation(0,0,0);
 
 %Set goal frames for left and right arm, based on object frame
 %TO DO: Set arm goal frame based on object frame.
-arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos,rotation(0, 0, 0));
-arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos,rotation(0, 0, 0));
+arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+[-0.1 0 0]',rotation(pi, -pi/6, 0));
+arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+[0.1 0 0]',rotation(0, pi+pi/6, 0));
 
 %Define Object goal frame (Cooperative Motion)
 wTog=[rotation(0,0,0) [0.65, -0.35, 0.28]'; 0 0 0 1];
@@ -42,9 +43,12 @@ arm2.set_obj_goal(wTog)
 %Define Tasks, input values(Robot type(L,R,BM), Task Name)
 left_tool_task=tool_task("L","LT");
 right_tool_task=tool_task("R","RT");
+left_min_altitude=ee_altitude_task("L","LT",0.15);
+right_min_altitude=ee_altitude_task("R","RT",0.15);
 
 %Actions for each phase: go to phase, coop_motion phase, end_motion phase
-go_to={left_tool_task,right_tool_task};
+go_to={left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
+
 %Load Action Manager Class and load actions
 actionManager = ActionManager();
 actionManager.addAction(go_to);
