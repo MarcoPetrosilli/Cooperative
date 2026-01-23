@@ -1,12 +1,13 @@
-classdef tool_task < Task   
+classdef bim_rigid_const_task < Task   
     %Tool position control for a single arm
     properties
     end
 
     methods
-        function obj=tool_task(robot_ID,taskID)
+        function obj=bim_rigid_const_task(robot_ID,taskID)
             obj.ID=robot_ID;
             obj.task_name=taskID;
+
         end
         function updateReference(obj, robot_system)
             if(obj.ID=='L')
@@ -15,28 +16,35 @@ classdef tool_task < Task
                 robot=robot_system.right_arm;    
             end
 
-         %disp(robot.q*180/pi)
+         [v_ang, v_lin] = CartError(robot.wTog , robot.wTo);
+
+         % robot.dist_to_goal=v_lin;
+         % robot.rot_to_goal=v_ang;
          
-         [v_ang, v_lin] = CartError(robot.wTg , robot.wTt);
-         robot.dist_to_goal=v_lin;
-         robot.rot_to_goal=v_ang;
          obj.xdotbar = 1.0 * [v_ang; v_lin];
-         % limit the requested velocities...
+
          obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.3);
          obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end
+
+
         function updateJacobian(obj,robot_system)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
                 robot=robot_system.right_arm;    
             end
-            tool_jacobian=robot.wJt;
+            
+            r_skew = skew(robot.tTo(1:3,4));
+            r_skew = robot.wTt(1:3,1:3)*r_skew;
+            w_tSo = [eye(3) zeros(3,3);r_skew' eye(3)];
+
+            robot.wJo=w_tSo*robot.wJt;
             
             if obj.ID=='L'
-                obj.J=[tool_jacobian, zeros(6, 7)];
+                obj.J=[robot.wJo, zeros(6, 7)];
             elseif obj.ID=='R'
-                obj.J=[zeros(6, 7), tool_jacobian];
+                obj.J=[zeros(6, 7), robot.wJo];
             end
         end
 

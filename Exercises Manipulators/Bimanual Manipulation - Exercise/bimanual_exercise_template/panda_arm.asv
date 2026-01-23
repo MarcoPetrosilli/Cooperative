@@ -7,7 +7,7 @@ classdef panda_arm < handle
         %% --- State variables ---
         q
         qdot
-        grasped
+        grasping_grasped
         %% --- Geometry ---
         wTb
         %% --- Limits ---
@@ -61,6 +61,8 @@ classdef panda_arm < handle
             obj.eTt = [cos(theta) -sin(theta) 0 0;sin(theta) cos(theta) 0 0;0 0 1 tool_length;0 0 0 1];
                        
             obj.wTt = obj.wTe*obj.eTt;
+
+            grasping_grasped = true;
           
         end
 
@@ -87,7 +89,7 @@ classdef panda_arm < handle
             % the tool is, after grasped I've to update wTo, since o is
             % moving with the arm
             
-            if ~obj.grasped
+            if obj.grasping_grasped
                 obj.tTo = inv(obj.wTt)*obj.wTo;
             else
                 obj.wTo = obj.wTt*obj.tTo;

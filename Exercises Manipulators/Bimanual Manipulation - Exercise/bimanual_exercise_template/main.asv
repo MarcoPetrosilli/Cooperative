@@ -57,9 +57,8 @@ right_bim_constraint_task=bim_rigid_const_task("R","RB");
 %Actions for each phase: go to phase, coop_motion phase, end_motion phase
 go_to={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
 
-arm1.grasped = false;
-arm2.grasped = false;
-
+arm1.grasping_grasped = false;
+arm.grasping_grasped = false;
 %Load Action Manager Class and load actions
 actionManager = ActionManager();
 actionManager.addAction(go_to);
@@ -96,13 +95,16 @@ for t = 0:dt:end_time
     bm_sim.time
     % 7. Optional real-time slowdown
     SlowdownToRealtime(dt);
+
+    disp("ARM 1 DIST to GOAL")
+    disp(arm1.dist_to_goal)
     
-    if (norm(arm1.dist_to_goal)<1.0e-03) && ~arm1.grasped
+    if arm1.dist_to_goal<1.0e-03 && ~arm1.grasping_grasped
         go_to={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_bim_constraint_task,right_bim_constraint_task};
         actionManager.cleanAction(1);
         actionManager.addAction(go_to);
-        arm1.grasped = true;
-        arm2.grasped = true;
+        arm1.grasping_grasped = true;
+        arm2.grasping_grasped = true;
     end
 end
 %Display joint position and velocity, Display for a given action, a number
