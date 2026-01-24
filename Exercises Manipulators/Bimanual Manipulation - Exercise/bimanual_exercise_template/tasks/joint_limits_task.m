@@ -3,6 +3,7 @@ classdef joint_limits_task < Task
     properties
         threshold = 0.2;
         k = 0.5
+        constrained = false;
     end
 
     methods
@@ -11,7 +12,7 @@ classdef joint_limits_task < Task
             obj.task_name=taskID;
         end
 
-        function updateReference(obj, robot_system)
+        function updateReference(obj, robot_system,grasped)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')

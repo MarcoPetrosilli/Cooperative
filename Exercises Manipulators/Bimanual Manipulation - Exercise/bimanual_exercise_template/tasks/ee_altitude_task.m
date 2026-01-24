@@ -5,6 +5,7 @@ classdef ee_altitude_task < Task
     properties
         desired_altitude;
         altitude
+        constrained = false
     end
     
     methods
@@ -14,7 +15,7 @@ classdef ee_altitude_task < Task
             obj.desired_altitude = desired_altitude;
         end
         
-        function updateReference(obj, robot_system)
+        function updateReference(obj, robot_system,grasped)
 
             if(obj.ID=='L')
                 robot=robot_system.left_arm;

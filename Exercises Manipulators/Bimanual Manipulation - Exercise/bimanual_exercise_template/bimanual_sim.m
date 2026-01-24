@@ -36,11 +36,11 @@ classdef bimanual_sim < handle
             obj.loopCounter = obj.loopCounter + 1;
         end
 
-        function update_full_kinematics(obj)
+        function update_full_kinematics(obj, grasped)
             %Compute forward and differential kinematics for both arms,
             %considering the current mission phase
-            obj.left_arm.update_transform()
-            obj.right_arm.update_transform()
+            obj.left_arm.update_transform(grasped)
+            obj.right_arm.update_transform(grasped)
             obj.left_arm.update_jacobian()
             obj.right_arm.update_jacobian()
         end

@@ -1,6 +1,7 @@
 classdef bim_rigid_const_task < Task   
     %Tool position control for a single arm
     properties
+        constrained = true
     end
 
     methods
@@ -9,17 +10,20 @@ classdef bim_rigid_const_task < Task
             obj.task_name=taskID;
 
         end
-        function updateReference(obj, robot_system)
+        function updateReference(obj, robot_system, grasped)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
                 robot=robot_system.right_arm;    
             end
 
-         [v_ang, v_lin] = CartError(robot.wTog , robot.wTo);
-
-         % robot.dist_to_goal=v_lin;
-         % robot.rot_to_goal=v_ang;
+            [v_ang, v_lin] = CartError(robot.wTog , robot.wTo);
+           
+            if grasped
+                robot.dist_to_goal=v_lin;
+                robot.rot_to_goal=v_ang;
+            end
+         
          
          obj.xdotbar = 1.0 * [v_ang; v_lin];
 

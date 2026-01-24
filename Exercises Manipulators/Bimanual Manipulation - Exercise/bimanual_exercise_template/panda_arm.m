@@ -7,7 +7,6 @@ classdef panda_arm < handle
         %% --- State variables ---
         q
         qdot
-        grasped
         %% --- Geometry ---
         wTb
         %% --- Limits ---
@@ -76,7 +75,7 @@ classdef panda_arm < handle
         end
 
 
-        function update_transform(obj)
+        function update_transform(obj, grasped)
             % Compute forward kinematics of the robot
 
             obj.bTe=getTransform(obj.robot_model.franka,[obj.q',0,0],'panda_link7');
@@ -87,12 +86,12 @@ classdef panda_arm < handle
             % the tool is, after grasped I've to update wTo, since o is
             % moving with the arm
             
-            if ~obj.grasped
+            if ~grasped
                 obj.tTo = inv(obj.wTt)*obj.wTo;
             else
                 obj.wTo = obj.wTt*obj.tTo;
             end
-            
+
             
         end
         function update_jacobian(obj)

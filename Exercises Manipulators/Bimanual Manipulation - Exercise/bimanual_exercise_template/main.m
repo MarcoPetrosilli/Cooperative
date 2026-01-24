@@ -55,14 +55,25 @@ left_bim_constraint_task=bim_rigid_const_task("L","LB");
 right_bim_constraint_task=bim_rigid_const_task("R","RB");
 
 %Actions for each phase: go to phase, coop_motion phase, end_motion phase
-go_to={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
 
-arm1.grasped = false;
-arm2.grasped = false;
+go_to_grasp_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
+move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude, left_bim_constraint_task, right_bim_constraint_task};
+unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task,left_bim_constraint_task,right_bim_constraint_task};
+final_set = {left_min_altitude, right_min_altitude};
+
+grasped = false;
+final = false;
 
 %Load Action Manager Class and load actions
 actionManager = ActionManager();
-actionManager.addAction(go_to);
+
+actionManager.addAction(go_to_grasp_set,"go_to_grasp");
+actionManager.addAction(move_grasped_obj_set,"move_grasped_obj");
+actionManager.addAction(final_set,"final");
+
+actionManager.addUnifiedAction(unified_set);
+
+actionManager.setCurrentAction("go_to_grasp");
 
 %Initiliaze robot interface
 robot_udp=UDP_interface(real_robot);
@@ -79,10 +90,10 @@ for t = 0:dt:end_time
         bm_sim.right_arm.q=qr;
     end
     % 2. Update Full kinematics of the bimanual system
-    bm_sim.update_full_kinematics();
+    bm_sim.update_full_kinematics(grasped);
     
     % 3. Compute control commands for current action
-    [q_dot]=actionManager.computeICAT(bm_sim, arm1, arm2);
+    [q_dot]=actionManager.computeICAT(bm_sim, arm1, arm2, grasped, final);
     
     
     % 4. Step the simulator (integrate velocities)
@@ -97,12 +108,12 @@ for t = 0:dt:end_time
     % 7. Optional real-time slowdown
     SlowdownToRealtime(dt);
     
-    if (norm(arm1.dist_to_goal)<1.0e-03) && ~arm1.grasped
-        go_to={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_bim_constraint_task,right_bim_constraint_task};
-        actionManager.cleanAction(1);
-        actionManager.addAction(go_to);
-        arm1.grasped = true;
-        arm2.grasped = true;
+    if (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~grasped
+        actionManager.setCurrentAction("move_grasped_obj");
+        grasped = true;
+    elseif (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~final && grasped
+        actionManager.setCurrentAction("final");
+        final = true;
     end
 end
 %Display joint position and velocity, Display for a given action, a number
