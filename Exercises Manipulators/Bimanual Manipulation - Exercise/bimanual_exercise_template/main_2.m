@@ -9,7 +9,6 @@ clc;clear;close all;
 dt = 0.005;
 end_time = 20;
 
-mu_0 = 1;
 
 % Initialize Franka Emika Panda Model
 model = load("panda.mat");
@@ -31,7 +30,7 @@ bm_sim=bimanual_sim(dt,arm1,arm2,end_time);
 obj_length = 0.12;
 w_obj_pos = [0.5 0 0.5]';
 w_obj_ori = rotation(0,0,0);
-wTog=[w_obj_ori w_obj_pos; 0 0 0 1];
+% wTog=[w_obj_ori w_obj_pos; 0 0 0 1];
 
 %Set goal frames for left and right arm, based on object frame
 %TO DO: Set arm goal frame based on object frame.
@@ -56,30 +55,45 @@ right_bim_constraint_task=bim_rigid_const_task("R","RB");
 
 %Actions for each phase: go to phase, coop_motion phase, end_motion phase
 
-go_to_grasp_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
-move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude, left_bim_constraint_task, right_bim_constraint_task};
-unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task,left_bim_constraint_task,right_bim_constraint_task};
-final_set = {left_min_altitude, right_min_altitude};
+
+% LEFT SETS
+l_go_to_grasp_set={left_joint_limits_task,left_min_altitude,left_tool_task,right_tool_task};
+l_move_grasped_obj_set={left_joint_limits_task,left_min_altitude,left_bim_constraint_task};
+l_unified_set = {left_joint_limits_task,left_min_altitude,left_tool_task,left_bim_constraint_task};
+l_final_set = {left_min_altitude};
+
+% RIGHT SETS
+r_go_to_grasp_set={right_joint_limits_task,right_min_altitude,right_tool_task};
+r_move_grasped_obj_set={right_joint_limits_task,right_min_altitude, right_bim_constraint_task};
+r_unified_set = {right_joint_limits_task, right_min_altitude,right_tool_task,right_bim_constraint_task};
+r_final_set = {right_min_altitude, right_min_altitude};
 
 grasped = false;
 final = false;
 
-%Load Action Manager Class and load actions
-actionManager = ActionManager();
+%Load LEFT Action Manager Class and load actions
+l_actionManager = ActionManager();
+l_actionManager.addAction(l_go_to_grasp_set,"l_go_to_grasp");
+l_actionManager.addAction(l_move_grasped_obj_set,"l_move_grasped_obj");
+l_actionManager.addAction(l_final_set,"l_final");
+l_actionManager.addUnifiedAction(l_unified_set);
 
-actionManager.addAction(go_to_grasp_set,"go_to_grasp");
-actionManager.addAction(move_grasped_obj_set,"move_grasped_obj");
-actionManager.addAction(final_set,"final");
+%Load RIGHT Action Manager Class and load actions
+r_actionManager = ActionManager();
+r_actionManager.addAction(r_go_to_grasp_set,"r_go_to_grasp");
+r_actionManager.addAction(r_move_grasped_obj_set,"r_move_grasped_obj");
+r_actionManager.addAction(r_final_set,"r_final");
+r_actionManager.addUnifiedAction(r_unified_set);
 
-actionManager.addUnifiedAction(unified_set);
 
-actionManager.setCurrentAction("go_to_grasp");
+l_actionManager.setCurrentAction("l_go_to_grasp");
+r_actionManager.setCurrentAction("r_go_to_grasp");
 
 %Initiliaze robot interface
 robot_udp=UDP_interface(real_robot);
 
 %Initialize logger
-logger=SimulationLogger(ceil(end_time/dt)+1,bm_sim,actionManager);
+logger=SimulationLogger(ceil(end_time/dt)+1,bm_sim,l_actionManager);
 
 %Main simulation Loop
 for t = 0:dt:end_time
@@ -93,9 +107,10 @@ for t = 0:dt:end_time
     bm_sim.update_full_kinematics(grasped);
     
     % 3. Compute control commands for current action
-    [q_dot]=actionManager.computeICAT(bm_sim, arm1, arm2, grasped, final);
+    [q_dot_l]=l_actionManager.computeICAT(bm_sim, arm1, arm2, grasped, final, "L");
+    [q_dot_r]=r_actionManager.computeICAT(bm_sim, arm2, arm1, grasped, final, "R");
     
-    
+    q_dot = [q_dot_l(1:7);q_dot_r(8:14)];
     % 4. Step the simulator (integrate velocities)
     bm_sim.sim(q_dot);
     
@@ -105,16 +120,18 @@ for t = 0:dt:end_time
     % 6. Lggging
     logger.update(bm_sim.time,bm_sim.loopCounter)
     bm_sim.time
+
     % 7. Optional real-time slowdown
     SlowdownToRealtime(dt);
     
     if (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~grasped
-        actionManager.setCurrentAction("move_grasped_obj");
+        disp(arm1.rot_to_goal)
+        l_actionManager.setCurrentAction("l_move_grasped_obj");
+        r_actionManager.setCurrentAction("r_move_grasped_obj");
         grasped = true;
-    end
-
-    if (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~final && grasped
-        actionManager.setCurrentAction("final");
+    elseif (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~final && grasped
+        l_actionManager.setCurrentAction("l_final");
+        r_actionManager.setCurrentAction("r_final");
         final = true;
     end
 end
