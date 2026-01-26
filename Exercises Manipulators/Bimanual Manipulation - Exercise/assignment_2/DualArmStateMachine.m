@@ -46,8 +46,8 @@ classdef DualArmStateMachine < handle
                     if targetReached
                         
                         actionManager.setCurrentAction("final");
-                        
-                       
+
+
                         obj.State = obj.STATE_FINAL;
                         fprintf('State Transition: GRASPED -> FINAL\n');
                     end

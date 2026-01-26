@@ -1,157 +1,132 @@
 function main()
-%Add path
-addpath('./simulation_scripts');
-addpath('./tools')
-addpath('./icat')
-addpath('./tasks')
-clc;clear;close all; 
-%Simulation Parameters
-dt = 0.005;
-end_time = 20;
+    % Add path
+    addpath('./simulation_scripts');
+    addpath('./tools')
+    addpath('./icat')
+    addpath('./tasks')
+    clc; clear; close all; 
 
+    % --- Simulation Parameters ---
+    dt = 0.005;
+    end_time = 20;
 
-% Initialize Franka Emika Panda Model
-model = load("panda.mat");
+    % Initialize Franka Emika Panda Model
+    model = load("panda.mat");
 
-%Simulation Setup
-real_robot = false;
+    % --- Simulation Setup ---
+    real_robot = false;
 
-%Initiliaze panda_arm() Class, specifying the base offset w.r.t World Frame
-arm1=panda_arm(model,eye(4));
+    % Initialize panda_arm() Class
+    arm1 = panda_arm(model, eye(4), "L");
+    
+    % Transformation Matrix from World to Right Arm Base
+    wTb2 = [-1 0 0 1.06; 0 -1 0 -0.01; 0 0 1 0; 0 0 0 1];
+    arm2 = panda_arm(model, wTb2,  "R");
 
-%TO DO: TRANSFORMATION MATRIX FROM WORLD FRAME TO RIGHT ARM BASE FRAME
-wTb2 =[-1 0 0 1.06;0 -1 0 -0.01;0 0 1 0;0 0 0 1];
-arm2=panda_arm(model,wTb2);
+    % Initialize Bimanual Simulator Class
+    bm_sim = bimanual_sim(dt, arm1, arm2, end_time);
 
-%Initialize Bimanual Simulator Class
-bm_sim=bimanual_sim(dt,arm1,arm2,end_time);
+    % --- Define Object ---
+    obj_length = 0.12;
+    w_obj_pos = [0.5 0 0.5]';
+    w_obj_ori = rotation(0, 0, 0);
 
-%Define Object Shape and origin Frame
-obj_length = 0.12;
-w_obj_pos = [0.5 0 0.5]';
-w_obj_ori = rotation(0,0,0);
-wTog=[w_obj_ori w_obj_pos; 0 0 0 1];
+    % Set goal frames based on object frame
+    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.1 0 0]', rotation(pi, -pi/6, 0));
+    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.1 0 0]', rotation(0, pi+pi/6, 0));
 
-dist_to_goal_1 = [];
-dist_to_goal_2 = [];
-X_o1 = [];
-X_o2 = [];
-Xo_12 = [];
+    % Define Object goal frame (Cooperative Motion)
+    wTog = [rotation(0, 0, 0) [0.65, -0.35, 0.28]'; 0 0 0 1];
+    arm1.set_obj_goal(wTog);
+    arm2.set_obj_goal(wTog);
 
-%Set goal frames for left and right arm, based on object frame
-%TO DO: Set arm goal frame based on object frame.
-arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+[-0.1 0 0]',rotation(pi, -pi/6, 0));
-arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+[+0.1 0 0]',rotation(0, pi+pi/6, 0));
+    % --- Define Tasks ---
+    left_tool_task = tool_task("L", "LT");
+    right_tool_task = tool_task("R", "RT");
+    left_min_altitude = ee_altitude_task("L", "LA", 0.15);
+    right_min_altitude = ee_altitude_task("R", "RA", 0.15);
+    left_joint_limits_task = joint_limits_task("L", "LL");
+    right_joint_limits_task = joint_limits_task("R", "RL");
+    left_bim_constraint_task = bim_rigid_const_task("L", "LB");
+    right_bim_constraint_task = bim_rigid_const_task("R", "RB");
 
-%Define Object goal frame (Cooperative Motion)
-wTog=[rotation(0,0,0) [0.65, -0.35, 0.28]'; 0 0 0 1];
-arm1.set_obj_goal(wTog)
-arm2.set_obj_goal(wTog)
+    % --- Define Action Sets (LEFT) ---
+    l_go_to_grasp_set = {left_joint_limits_task, left_min_altitude, left_tool_task};
+    l_move_grasped_obj_set = {left_joint_limits_task, left_min_altitude, left_bim_constraint_task};
+    l_final_set = {left_min_altitude};
+    l_unified_set = {left_joint_limits_task, left_min_altitude, left_tool_task, left_bim_constraint_task};
 
-%Define Tasks, input values(Robot type(L,R,BM), Task Name)
+    % --- Define Action Sets (RIGHT) ---
+    r_go_to_grasp_set = {right_joint_limits_task, right_min_altitude, right_tool_task};
+    r_move_grasped_obj_set = {right_joint_limits_task, right_min_altitude, right_bim_constraint_task};
+    r_final_set = {right_min_altitude};
+    r_unified_set = {right_joint_limits_task, right_min_altitude, right_tool_task, right_bim_constraint_task};
 
-left_tool_task=tool_task("L","LT");
-right_tool_task=tool_task("R","RT");
-left_min_altitude=ee_altitude_task("L","LA",0.15);
-right_min_altitude=ee_altitude_task("R","RA",0.15);
-left_joint_limits_task=joint_limits_task("L","LL");
-right_joint_limits_task=joint_limits_task("R","RL");
-left_bim_constraint_task=bim_rigid_const_task("L","LB");
-right_bim_constraint_task=bim_rigid_const_task("R","RB");
+    % --- Initialize LEFT Action Manager ---
+    l_actionManager = ActionManager();
+    l_actionManager.addAction(l_go_to_grasp_set, "l_go_to_grasp");
+    l_actionManager.addAction(l_move_grasped_obj_set, "l_move_grasped_obj");
+    l_actionManager.addAction(l_final_set, "l_final");
+    l_actionManager.addUnifiedAction(l_unified_set);
+    l_actionManager.setCurrentAction("l_go_to_grasp");
 
-%Actions for each phase: go to phase, coop_motion phase, end_motion phase
+    % --- Initialize RIGHT Action Manager ---
+    r_actionManager = ActionManager();
+    r_actionManager.addAction(r_go_to_grasp_set, "r_go_to_grasp");
+    r_actionManager.addAction(r_move_grasped_obj_set, "r_move_grasped_obj");
+    r_actionManager.addAction(r_final_set, "r_final");
+    r_actionManager.addUnifiedAction(r_unified_set);
+    r_actionManager.setCurrentAction("r_go_to_grasp");
 
-go_to_grasp_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
-move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude, left_bim_constraint_task, right_bim_constraint_task};
-unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task,left_bim_constraint_task,right_bim_constraint_task};
-final_set = {left_min_altitude, right_min_altitude};
+    % --- Initialize State Machines ---
+    
+    l_StateMachine = DualArmStateMachine(l_actionManager, arm1); 
+    r_StateMachine = DualArmStateMachine(r_actionManager, arm2);
 
-grasped = false;
-final = false;
+    % Initialize Robot Interface & Logger   
+    robot_udp = UDP_interface(real_robot);
 
-%Load Action Manager Class and load actions
-actionManager = ActionManager();
+    logger = SimulationLogger(ceil(end_time/dt)+1, bm_sim, l_actionManager);
 
-actionManager.addAction(go_to_grasp_set,"go_to_grasp");
-actionManager.addAction(move_grasped_obj_set,"move_grasped_obj");
-actionManager.addAction(final_set,"final");
+    % --- Main Simulation Loop ---
+    for t = 0:dt:end_time
+        
+        % 1. Receive UDP packets
+        [ql, qr] = robot_udp.udp_receive(t);
+        if real_robot
+            bm_sim.left_arm.q = ql;
+            bm_sim.right_arm.q = qr;
+        end
 
-actionManager.addUnifiedAction(unified_set);
+        % 2. Update Full Kinematics
+        bm_sim.update_full_kinematics(l_StateMachine, r_StateMachine);
+        
+        % 3. Compute Control Commands
+        [q_dot_l] = l_actionManager.computeICAT(bm_sim, arm1, arm2, l_StateMachine, r_StateMachine);
+        [q_dot_r] = r_actionManager.computeICAT(bm_sim, arm2, arm1, r_StateMachine, l_StateMachine);
+        
+        q_dot = [q_dot_l(1:7); q_dot_r(8:14)];
 
-actionManager.setCurrentAction("go_to_grasp");
+        % 4. Step Simulator
+        bm_sim.sim(q_dot);
+        
+        % 5. Send UDP
+        robot_udp.send(t, bm_sim);
 
-%Initiliaze robot interface
-robot_udp=UDP_interface(real_robot);
+        % 6. Logging
+        logger.update(bm_sim.time, bm_sim.loopCounter);
+        bm_sim.time
 
-%Initialize logger
-logger=SimulationLogger(ceil(end_time/dt)+1,bm_sim,actionManager);
-
-%Main simulation Loop
-for t = 0:dt:end_time
-    % 1. Receive UDP packets - DO NOT EDIT
-    [ql,qr]=robot_udp.udp_receive(t);
-    if real_robot==true %Only in real setup, assign current robot configuration as initial configuratio
-        bm_sim.left_arm.q=ql;
-        bm_sim.right_arm.q=qr;
+        % 7. Real-time Slowdown
+        SlowdownToRealtime(dt);
+        
+        % 8. Update State Machines
+        l_StateMachine.update(arm1, l_actionManager, r_StateMachine);
+        r_StateMachine.update(arm2, r_actionManager, l_StateMachine);
     end
-    % 2. Update Full kinematics of the bimanual system
-    bm_sim.update_full_kinematics(grasped);
-    
-    % 3. Compute control commands for current action
-    [q_dot]=actionManager.computeICAT(bm_sim, arm1, arm2, grasped, final);
-    
-    
-    % 4. Step the simulator (integrate velocities)
-    bm_sim.sim(q_dot);
-    
-    % 5. Send updated state to Pybullet
-    robot_udp.send(t,bm_sim)
 
-    % 6. Lggging
-    logger.update(bm_sim.time,bm_sim.loopCounter)
-    bm_sim.time
-    % 7. Optional real-time slowdown
-    SlowdownToRealtime(dt);
-    
-    if (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~grasped
-        actionManager.setCurrentAction("move_grasped_obj");
-        grasped = true;
-    elseif (norm(arm1.dist_to_goal)<1.0e-03) && norm(arm2.dist_to_goal)<1.0e-03 && ~final && grasped
-        actionManager.setCurrentAction("final");
-        final = true;
-    end
-
-%Display joint position and velocity, Display for a given action, a number
-%of tasks
-
-    dist_to_goal_1 = [dist_to_goal_1 arm1.dist_to_goal];
-    dist_to_goal_2 = [dist_to_goal_2 arm2.dist_to_goal];
-
-    X_o1 = [X_o1 arm1.X_o];
-    X_o2 = [X_o2 arm2.X_o];
-    Xo_12 = [Xo_12 arm1.Xo_12];
-
-end
-%Display joint position and velocity, Display for a given action, a number
-figure;
-plot(dist_to_goal_1, t);
-
-figure;
-plot(dist_to_goal_2, t);
-
-figure;
-plot(X_o1, t);
-
-figure;
-plot(X_o2, t);
-
-figure;
-plot(Xo_12, t);
-
-
-
-
-action=1;
-tasks=[1];
-logger.plotAll(action,tasks);
+    % Plotting
+    action = 1;
+    tasks = [1];
+    logger.plotAll(action, tasks);
 end

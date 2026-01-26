@@ -74,21 +74,14 @@ classdef ActionManager < handle
                 end
             end
             ydotbar = obj.perform_ICAT(tasks);
-
             if actual_arm.robot_ID == "L"
-
                 actual_arm.X_o = actual_arm.wJo*ydotbar(1:7);
-
             else
                 actual_arm.X_o = actual_arm.wJo*ydotbar(8:14);
-                
             end
-            if actual_StateMachine.isGrasped() || other_StateMachine.isGrasped() 
-
+            if actual_StateMachine.isGrasped() && other_StateMachine.isGrasped() 
                 actual_arm.Xo_12 = obj.coordinate_velocities(actual_arm, other_arm);
-
                 tasks_lr = obj.reorder_priorities(tasks, actual_arm);
-
                 ydotbar = obj.perform_ICAT(tasks_lr);
             end
         end
@@ -100,7 +93,11 @@ classdef ActionManager < handle
 
             H_12 = [H_actual zeros(6,6);zeros(6,6) H_other];
             
-            [v_ang, v_lin] = CartError(actual_arm.wTog , actual_arm.wTo);
+            if actual_arm.robot_ID == "L"
+                [v_ang, v_lin] = CartError(actual_arm.wTog , actual_arm.wTo);
+            elseif actual_arm.robot_ID == "R"
+                [v_ang_o, v_lin_o] = CartError(other_arm.wTog , other_arm.wTo);
+             
 
             xdotbar = 1.0 * [v_ang; v_lin];
 
@@ -121,7 +118,6 @@ classdef ActionManager < handle
             Xo_12 = H_12*(eye(12)-pinv(C)*C)*Xdot_t;
 
         end
-        
         function tasks_lr = reorder_priorities(obj, tasks, actual_arm)
             
             if actual_arm.robot_ID == "L"
@@ -134,7 +130,6 @@ classdef ActionManager < handle
             
             tasks_lr = [tasks(bim_task_ID), tasks(1:bim_task_ID-1), tasks(bim_task_ID+1:end)];
         end
-
         function ydotbar = perform_ICAT(obj, tasks)
             ydotbar = zeros(14,1);
             Qp = eye(14);

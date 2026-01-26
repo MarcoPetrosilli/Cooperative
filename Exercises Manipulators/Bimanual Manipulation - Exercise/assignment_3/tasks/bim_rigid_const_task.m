@@ -10,7 +10,7 @@ classdef bim_rigid_const_task < Task
             obj.task_name=taskID;
 
         end
-        function updateReference(obj, robot_system, grasped)
+        function updateReference(obj, robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
@@ -19,7 +19,7 @@ classdef bim_rigid_const_task < Task
 
             [v_ang, v_lin] = CartError(robot.wTog , robot.wTo);
            
-            if grasped
+            if StateMachine.isGrasped()
                 robot.dist_to_goal=v_lin;
                 robot.rot_to_goal=v_ang;
             end

@@ -10,7 +10,7 @@ classdef tool_task < Task
             obj.task_name=taskID;
             obj.constrained = false;
         end
-        function updateReference(obj, robot_system, grasped)
+        function updateReference(obj, robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
@@ -21,7 +21,7 @@ classdef tool_task < Task
          
          [v_ang, v_lin] = CartError(robot.wTg , robot.wTt);
 
-         if ~grasped
+         if ~StateMachine.isGrasped()
                 robot.dist_to_goal=v_lin;
                 robot.rot_to_goal=v_ang;
          end
