@@ -35,5 +35,9 @@ function [Q, rho, W] = iCAT_task(A, J, Qold, rhoold, xdot, lambda, threshold, we
    W = J*Qold*JQpinv1;
    T = eye(n) - Qold*JQpinv2*W*J;
    % compute the new rho
+   % fprintf('Size A: %d x %d\n', size(A))
+   % fprintf('Size J: %d x %d\n', size(J))
+   % fprintf('Size xdot: %d x %d\n', size(xdot))
+   % fprintf('Size W: %d x %d\n', size(W))
    rho = T*rhoold + Qold*JQpinv2*W*xdot;  
 end
