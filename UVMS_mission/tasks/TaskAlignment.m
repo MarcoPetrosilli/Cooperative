@@ -1,7 +1,7 @@
 classdef TaskAlignment < Task   
     properties
         theta
-        id = "alignment";
+        id = "World Alignment";
     end
 
 

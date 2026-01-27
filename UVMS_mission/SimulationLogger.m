@@ -69,7 +69,7 @@ classdef SimulationLogger < handle
             for i = 1:size(obj.a,3)
                 subplot(size(obj.a,3),1,i);
                 plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-                title(['Task ', num2str(i), ' Activations (diagonal)']);
+                title(['Task', num2str(i), obj.task_set{i}.id]);
             end
         end
     end
