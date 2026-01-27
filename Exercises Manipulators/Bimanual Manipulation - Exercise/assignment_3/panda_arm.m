@@ -33,6 +33,9 @@ classdef panda_arm < handle
         %% Non Cooperative / Cooperative velocities
         X_o
         Xo_12
+
+        tg
+        tf
     end
 
     methods

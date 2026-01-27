@@ -45,7 +45,7 @@ classdef ActionManager < handle
             obj.actionSwitchTime = tic; % start blending timer
         end
 
-        function [ydotbar] = computeICAT(obj, bm_system, arm1, arm2, StateMachine)
+        function [ydotbar] = computeICAT(obj, bm_system, StateMachine)
 
             tasks = obj.unified_action;
             tasks_id = [];
@@ -97,55 +97,11 @@ classdef ActionManager < handle
             %% 2. Perform ICAT and residual dumping (task-priority inverse kinematics) for the current Action
             
             ydotbar = obj.perform_ICAT(tasks);
-
-            %% 2. Perform bimanual rigid constraint policy
-
-            if StateMachine.isGrasped()
-
-                Xo_1_2 = obj.coordinate_velocities(arm1,arm2,ydotbar);
-                
-                tasks_lr = obj.reorder_priorities(tasks, Xo_1_2);
-                
-                ydotbar = obj.perform_ICAT(tasks_lr);
+            
+            if StateMachine.isGrasped()       
+                bm_system.left_arm.X_o = bm_system.left_arm.wJo*ydotbar(1:7);
+                bm_system.right_arm.X_o = bm_system.right_arm.wJo*ydotbar(8:14);
             end
-             
-        end
-
-        function Xo_1_2 = coordinate_velocities(obj, arm1, arm2, ydotbar)
-            X_o1 = arm1.wJo*ydotbar(1:7);
-            X_o2 = arm2.wJo*ydotbar(8:14);
-
-            H_1 = arm1.wJo*pinv(arm1.wJo);
-            H_2 = arm2.wJo*pinv(arm2.wJo);
-            H_12 = [H_1 zeros(6,6);zeros(6,6) H_2];
-
-            [v_ang, v_lin] = CartError(arm1.wTog , arm1.wTo);
-            xdotbar = 1.0 * [v_ang; v_lin];
-            xdotbar(1:3) = Saturate(xdotbar(1:3), 0.3);
-            xdotbar(4:6) = Saturate(xdotbar(4:6), 0.3);
-
-            mu_1 = obj.mu_0 + norm(xdotbar-X_o1);
-            mu_2 = obj.mu_0 + norm(xdotbar-X_o2);
-
-            xdot_t = (mu_1*X_o1+mu_2*X_o2)/(mu_1+mu_2);
-
-            Xdot_t = [xdot_t;xdot_t];
-
-            C = [H_1 -H_2];
-
-            Xo_1_2 = H_12*(eye(12)-pinv(C)*C)*Xdot_t;
-        end
-
-        function tasks_lr = reorder_priorities(obj, tasks, Xo_1_2)
-
-                
-                rb_ID = find(cellfun(@(x) x.task_name == "RB", tasks), 1);
-                tasks{rb_ID}.xdotbar = Xo_1_2(7:12,:);
-                tasks_lr = [tasks(rb_ID), tasks(1:rb_ID-1), tasks(rb_ID+1:end)];
-
-                lb_ID = find(cellfun(@(x) x.task_name == "LB", tasks_lr), 1);
-                tasks_lr{lb_ID}.xdotbar = Xo_1_2(1:6,:);
-                tasks_lr = [tasks_lr(lb_ID), tasks_lr(1:lb_ID-1), tasks_lr(lb_ID+1:end)];
 
         end
 
@@ -170,7 +126,7 @@ classdef ActionManager < handle
                 task = tasks{i};
 
                 task.updateReference(bm_system, StateMachine);
-                task.updateJacobian(bm_system);
+                task.updateJacobian(bm_system, StateMachine);
                 task.updateActivation(bm_system);
 
 

@@ -1,55 +1,26 @@
 classdef bim_rigid_const_task < Task   
     %Tool position control for a single arm
     properties
-        constrained = true
+        constrained = true;
     end
 
     methods
-        function obj=bim_rigid_const_task(robot_ID,taskID)
-            obj.ID=robot_ID;
+        function obj=bim_rigid_const_task(taskID)
             obj.task_name=taskID;
 
         end
-        function updateReference(obj, robot_system, StateMachine)
-            if(obj.ID=='L')
-                robot=robot_system.left_arm;
-            elseif(obj.ID=='R')
-                robot=robot_system.right_arm;    
-            end
+    function updateReference(obj, robot_system, StateMachine)
 
-            [v_ang, v_lin] = CartError(robot.wTog , robot.wTo);
-           
-            if StateMachine.isGrasped()
-                robot.dist_to_goal=v_lin;
-                robot.rot_to_goal=v_ang;
-            end
-         
-         
-         obj.xdotbar = 1.0 * [v_ang; v_lin];
-
-         obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.3);
-         obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
-        end
-
-
-        function updateJacobian(obj,robot_system)
-            if(obj.ID=='L')
-                robot=robot_system.left_arm;
-            elseif(obj.ID=='R')
-                robot=robot_system.right_arm;    
-            end
+            obj.xdotbar = zeros(6,1);
             
-            r = robot.wTt(1:3,1:3)*robot.tTo(1:3,4);
-            r_skew = skew(r);
-            w_tSo = [eye(3) zeros(3,3);r_skew' eye(3)];
+    end
 
-            robot.wJo=w_tSo*robot.wJt;
+
+        function updateJacobian(obj, robot_system, StateMachine)
             
-            if obj.ID=='L'
-                obj.J=[robot.wJo, zeros(6, 7)];
-            elseif obj.ID=='R'
-                obj.J=[zeros(6, 7), robot.wJo];
-            end
+            robot_left=robot_system.left_arm;
+            robot_right=robot_system.right_arm;
+            obj.J = [robot_left.wJo -robot_right.wJo];
         end
 
         function updateActivation(obj, robot_system)

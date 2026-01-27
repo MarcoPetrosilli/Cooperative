@@ -27,11 +27,7 @@ classdef joint_limits_task < Task
         
         function updateJacobian(obj, robot_system)
 
-            if obj.ID=='L'
-                obj.J= [eye(7), zeros(7,7)];
-            elseif obj.ID=='R'
-                obj.J= [zeros(7,7), eye(7)];
-            end
+            obj.J= eye(7);
         end
 
         function updateActivation(obj, robot_system)

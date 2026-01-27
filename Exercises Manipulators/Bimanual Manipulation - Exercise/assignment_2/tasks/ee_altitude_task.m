@@ -15,7 +15,7 @@ classdef ee_altitude_task < Task
             obj.desired_altitude = desired_altitude;
         end
         
-        function updateReference(obj, robot_system,grasped)
+        function updateReference(obj, robot_system,StateMachine)
 
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
@@ -30,7 +30,7 @@ classdef ee_altitude_task < Task
          obj.xdotbar = Saturate(obj.xdotbar, 0.3);
 
         end
-        function updateJacobian(obj,robot_system)
+        function updateJacobian(obj,robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')

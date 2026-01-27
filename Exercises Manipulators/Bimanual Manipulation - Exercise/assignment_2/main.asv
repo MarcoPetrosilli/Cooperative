@@ -44,7 +44,7 @@ function main()
     
     
     %Define Object goal frame (Cooperative Motion)
-    wTog=[rotation(0,0,0) [0.65, -0.35, 4]'; 0 0 0 1];
+    wTog=[rotation(0,0,0) [0.65, -0.35, 3]'; 0 0 0 1];
     arm1.set_obj_goal(wTog)
     arm2.set_obj_goal(wTog)
     
@@ -57,18 +57,18 @@ function main()
     left_joint_limits_task=joint_limits_task("L","LL");
     right_joint_limits_task=joint_limits_task("R","RL");
 
-    bim_constraint_task=bim_rigid_const_task("BIM_CONST");
+    % bim_constraint_task=bim_rigid_const_task("BIM_CONST");
 
     
     
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
     go_to_grasp_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
-    move_grasped_obj_set={bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task, right_tool_task};
+    move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude, left_tool_task, right_tool_task};
     final_set = {left_min_altitude, right_min_altitude};
     
     
     %Unified task set
-    unified_set = {bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task};
+    unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task,bim_constraint_task,};
     
     
     %Load Action Manager Class and load actions
@@ -100,7 +100,7 @@ function main()
         bm_sim.update_full_kinematics(StateMachine);
         
         % 3. Compute control commands for current action
-        [q_dot]=actionManager.computeICAT(bm_sim, StateMachine);
+        [q_dot]=actionManager.computeICAT(bm_sim, arm1, arm2, StateMachine);
         
         % 4. Step the simulator (integrate velocities)
         bm_sim.sim(q_dot);

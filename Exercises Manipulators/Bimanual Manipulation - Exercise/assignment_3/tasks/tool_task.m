@@ -1,14 +1,13 @@
 classdef tool_task < Task   
     %Tool position control for a single arm
     properties
-        constrained
+        constrained = false
     end
 
     methods
         function obj=tool_task(robot_ID,taskID)
             obj.ID=robot_ID;
             obj.task_name=taskID;
-            obj.constrained = false;
         end
         function updateReference(obj, robot_system, StateMachine)
             if(obj.ID=='L')
@@ -39,11 +38,7 @@ classdef tool_task < Task
             end
             tool_jacobian=robot.wJt;
             
-            if obj.ID=='L'
-                obj.J=[tool_jacobian, zeros(6, 7)];
-            elseif obj.ID=='R'
-                obj.J=[zeros(6, 7), tool_jacobian];
-            end
+            obj.J=tool_jacobian;
         end
 
         function updateActivation(obj, robot_system)

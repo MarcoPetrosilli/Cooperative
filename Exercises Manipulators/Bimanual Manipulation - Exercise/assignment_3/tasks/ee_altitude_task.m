@@ -38,16 +38,12 @@ classdef ee_altitude_task < Task
             end
             tool_jacobian=robot.wJt;
             
-            if obj.ID=='L'
-                obj.J=[tool_jacobian(6,:), zeros(1, 7)];
-            elseif obj.ID=='R'
-                obj.J=[zeros(1, 7), tool_jacobian(6,:)];
-            end
+            obj.J=tool_jacobian(6,:);
         end
 
         function updateActivation(obj, robot_system)
             obj.A = eye(6);
-            
+
             th = obj.desired_altitude;
             delta = 0.1;
 

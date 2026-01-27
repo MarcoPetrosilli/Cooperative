@@ -2,7 +2,8 @@ classdef DualArmStateMachine < handle
     
     properties (SetAccess = private)
         State       
-        Tolerance   
+        Tolerance 
+        transition = false;
     end
     
     properties (Constant)
@@ -35,25 +36,33 @@ classdef DualArmStateMachine < handle
                 case obj.STATE_APPROACHING
                     if targetReached
                         disp(['Rot Error at Grasp: ', num2str(norm(arm1.rot_to_goal))]);
-                        
-                        actionManager.setCurrentAction("move_grasped_obj");
                        
                         obj.State = obj.STATE_GRASPED;
                         fprintf('State Transition: APPROACHING -> GRASPED\n');
                     end
                     
                 case obj.STATE_GRASPED
+
+                    if ~obj.transition
+                        actionManager.setCurrentAction("move_grasped_obj");
+                        obj.transition = true;
+                    end
+
                     if targetReached
                         
-                        actionManager.setCurrentAction("final");
-
-
                         obj.State = obj.STATE_FINAL;
+                        
                         fprintf('State Transition: GRASPED -> FINAL\n');
                     end
                     
                 case obj.STATE_FINAL
                     % Task finished
+
+                    if obj.transition
+                        actionManager.setCurrentAction("final");
+                        obj.transition = false;
+                    end
+                     
             end
         end
         
@@ -71,6 +80,10 @@ classdef DualArmStateMachine < handle
         
         function isFinished = isFinished(obj)
             isFinished = (obj.State == obj.STATE_FINAL);
+        end
+
+        function isApproaching = isApproaching(obj)
+            isApproaching = (obj.State == obj.STATE_APPROACHING);
         end
 
         function isGrasped = isGrasped(obj)
