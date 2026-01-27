@@ -1,4 +1,4 @@
-classdef TaskAttitude < Task   
+classdef TaskOrientationControl< Task   
     properties
         id = "Target Attitude";
     end

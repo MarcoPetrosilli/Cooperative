@@ -1,11 +1,11 @@
-classdef TaskJoints < Task
+classdef TaskJointsPosition < Task
     properties
         id = "Joints Home Position";
         q_home;
         e
     end
     methods
-        function obj = TaskJoints(q_home)
+        function obj = TaskJointsPosition(q_home)
             obj.q_home = q_home;
         end
         function updateReference(obj, robot)
