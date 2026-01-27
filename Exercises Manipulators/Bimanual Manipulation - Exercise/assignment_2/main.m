@@ -44,7 +44,7 @@ function main()
     
     
     %Define Object goal frame (Cooperative Motion)
-    wTog=[rotation(0,0,0) [0.65, -0.35, 0.28]'; 0 0 0 1];
+    wTog=[rotation(0,0,0) [0.65, -0.35, 3]'; 0 0 0 1];
     arm1.set_obj_goal(wTog)
     arm2.set_obj_goal(wTog)
     

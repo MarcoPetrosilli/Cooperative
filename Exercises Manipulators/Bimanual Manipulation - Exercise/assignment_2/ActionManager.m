@@ -108,7 +108,7 @@ classdef ActionManager < handle
                 
                 ydotbar = obj.perform_ICAT(tasks_lr);
             end
-            
+             
         end
 
         function Xo_1_2 = coordinate_velocities(obj, arm1, arm2, ydotbar)
@@ -138,14 +138,15 @@ classdef ActionManager < handle
 
         function tasks_lr = reorder_priorities(obj, tasks, Xo_1_2)
 
-                lb_ID = find(cellfun(@(x) x.task_name == "LB", tasks), 1);
+                
                 rb_ID = find(cellfun(@(x) x.task_name == "RB", tasks), 1);
-
-                tasks{lb_ID}.xdotbar = Xo_1_2(1:6,:);
                 tasks{rb_ID}.xdotbar = Xo_1_2(7:12,:);
-
                 tasks_lr = [tasks(rb_ID), tasks(1:rb_ID-1), tasks(rb_ID+1:end)];
-                tasks_lr = [tasks(lb_ID), tasks(1:lb_ID-1), tasks(lb_ID+1:end)];
+
+                lb_ID = find(cellfun(@(x) x.task_name == "LB", tasks_lr), 1);
+                tasks_lr{lb_ID}.xdotbar = Xo_1_2(1:6,:);
+                tasks_lr = [tasks_lr(lb_ID), tasks_lr(1:lb_ID-1), tasks_lr(lb_ID+1:end)];
+
         end
 
         function ydotbar = perform_ICAT(obj, tasks)
