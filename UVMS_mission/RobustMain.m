@@ -8,7 +8,7 @@ clc; clear; close all;
 
 % Simulation parameters
 dt = 0.005;
-endTime = 60;
+endTime = 65;
 % Initialize robot model and simulator
 robotModel = UvmsModel();          
 sim = UvmsSim(dt, robotModel, endTime);
@@ -34,11 +34,12 @@ landing_altitude = 0.1;
 safe_altitude = 2.0;
 % Transitions trasholds (tuning)
 dist_threshold = 1e-2;                      % to wp [m]
+manip_threshold = -1e-2;
 alt_threshold = landing_altitude + 1e-2;    % landing [m]
-manip_threshold = 1e-2;                     % manipulation [m]
+tool_threshold = 1e-2;                     % manipulation [m]
 % Parameters for manipulator
 arm_reach = 0.6;
-armBase_vehicle_dist = 1.2;
+armBase_vehicle_dist = 1.1;
 correction_step = 0.1;
 % Task list
 task_target_attitude = TaskTargetAttitude();        % P1 % da cambiare in modo che punti verso il target
@@ -97,8 +98,8 @@ manip_set = {
 unified_set = {task_min_safe_altitude, ... % safety
     task_still_manip, ...
     task_to_altitude, ...
-    task_manipulability_check, ...
     task_target_attitude, ...
+    task_manipulability_check, ...
     task_horizontal_attitude, ...
     task_look_ahead, ...
     task_pose, ...
@@ -151,8 +152,8 @@ for step = 1:sim.maxSteps
             if mod(sim.loopCounter, round(1 / sim.dt)) == 0
                 fprintf("Distance to reachability: %.2f \n", manip_err);
             end
-            if manip_err < manip_threshold
-                currentState = "Manipulation";
+            if manip_err > manip_threshold
+                currentState = "Landing";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Target in manipulation range. Start Landing\n', sim.time);
             end
@@ -169,7 +170,7 @@ for step = 1:sim.maxSteps
             tool_dist = norm(lin);
             if mod(sim.loopCounter, round(1 / sim.dt)) == 0
                 fprintf("Target distance: %.3f \n", tool_dist);
-                if tool_dist < manip_threshold
+                if tool_dist < tool_threshold
                     fprintf("Target reached - Mission complete \n")
                 end
             end

@@ -66,6 +66,7 @@ classdef TaskManipulabilityCheck < Task
         manip_threshold;
         err;
         lin;
+        yaw
     end
 
     methods
@@ -83,11 +84,17 @@ classdef TaskManipulabilityCheck < Task
             obj.err = dist_to_nodule - (obj.arm_length + obj.armBase_distance);
 
 
-            if obj.err > 0 % If original goal is too far:
+            if obj.err > obj.manip_threshold % If original goal is too far:
                 obj.lin = w_Tool_goal_XY - w_Vehicle_XY;
                 obj.lin = obj.lin(:);  % column vector
-                obj.xdotbar = 0.8 * obj.lin;
-                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.1);
+
+                % compute yaw so it moves in direction of target (not
+                % forward of vehicle
+                obj.yaw = atan2(obj.lin(2), obj.lin(1)); % Calculate yaw angle
+                R_yaw = [cos(obj.yaw) -sin(obj.yaw); sin(obj.yaw) cos(obj.yaw)];
+
+                obj.xdotbar = 0.8 * R_yaw * obj.lin;
+                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
             end
 
         end
@@ -98,10 +105,9 @@ classdef TaskManipulabilityCheck < Task
         function updateActivation(obj, robot)
             th = 0;
             delta = 0.5;
-            % obj.err = 1;
-            obj.A = eye(2) .* IncreasingBellShapedFunction(th-delta,th,0,1,obj.err);
-            % DEBUG
-            % fprintf('Size A: %d x %d\n', size(obj.A));
+            % act_yaw_err = DecreasingBellShapedFunction(th, th+delta, 0, 1, obj.yaw);
+            act_manip_err = IncreasingBellShapedFunction(th-delta, th, 0, 1, obj.err);
+            obj.A = eye(2) * act_manip_err %* act_yaw_err;
         end
     end
 end

@@ -75,12 +75,10 @@ classdef ActionManager < handle
                     task.updateActivation(robot)
                 elseif inCurrent(i) && ~inPrev(i) % entering → fade in
                     task.updateActivation(robot);
-                    % task.A = task.A * alpha;
                     task.A = task.A * IncreasingBellShapedFunction(0,obj.transitionDuration,0,1,t);
                     
                 elseif ~inCurrent(i) && inPrev(i) % leaving → fade out
                     task.updateActivation(robot);
-                    % task.A = task.A * R(1 - alpha);
                     task.A = task.A * DecreasingBellShapedFunction(0,obj.transitionDuration,0,1,t);
                 else % task not considered
                     task.updateActivation(robot);
