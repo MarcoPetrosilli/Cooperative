@@ -1,4 +1,4 @@
-classdef TaskAltitude < Task   
+classdef TaskAltitudeControl < Task   
     properties
         desired_altitude;
         equality;
@@ -9,7 +9,7 @@ classdef TaskAltitude < Task
     
     methods
 
-        function obj = TaskAltitude(desired_altitude, mode)
+        function obj = TaskAltitudeControl(desired_altitude, mode)
             obj.desired_altitude = desired_altitude;
             switch mode
                 case "safe_mode"

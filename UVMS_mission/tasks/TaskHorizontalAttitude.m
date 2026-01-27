@@ -1,4 +1,4 @@
-classdef TaskAlignment < Task   
+classdef TaskHorizontalAttitude < Task   
     properties
         theta
         id = "World Alignment";
@@ -35,7 +35,7 @@ classdef TaskAlignment < Task
             ang =  skew(wRv(:,3))*[0;0;1];
             ang = ang / norm(ang);
 
-            obj.J = ang'*[zeros(3,7) zeros(3,3),wRv];
+            obj.J = ang'*[zeros(3,7) zeros(3,3) robot.wTv(1:3,1:3)];
         end
         
         function updateActivation(obj, robot)

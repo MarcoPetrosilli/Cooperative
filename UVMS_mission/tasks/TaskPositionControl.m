@@ -1,4 +1,4 @@
-classdef TaskDistance < Task   
+classdef TaskPositionControl < Task   
     properties
         id = "Distance";
     end

@@ -1,4 +1,4 @@
-classdef TaskTool < Task   
+classdef TaskToolControl < Task   
     properties
         id = "Tool Control";
     end

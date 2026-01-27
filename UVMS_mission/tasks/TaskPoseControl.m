@@ -1,4 +1,4 @@
-classdef TaskPose < Task   
+classdef TaskPoseControl < Task   
     properties
         id = "Pose Control";
     end
