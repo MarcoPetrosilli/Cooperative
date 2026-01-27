@@ -94,6 +94,7 @@ classdef ActionManager < handle
         end
 
         function Xo_12 = coordinate_velocities(obj, actual_arm, other_arm)
+
             H_actual = actual_arm.wJo*pinv(actual_arm.wJo);
 
             H_other = other_arm.wJo*pinv(other_arm.wJo);
@@ -101,6 +102,7 @@ classdef ActionManager < handle
             H_12 = [H_actual zeros(6,6);zeros(6,6) H_other];
             
             [v_ang, v_lin] = CartError(actual_arm.wTog , actual_arm.wTo);
+            % [v_ango, v_lino] = CartError(other_arm.wTog , other_arm.wTo);
 
             xdotbar = 1.0 * [v_ang; v_lin];
 

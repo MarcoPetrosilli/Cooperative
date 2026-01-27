@@ -39,8 +39,21 @@ classdef bimanual_sim < handle
         function update_full_kinematics(obj, StateMachine)
             %Compute forward and differential kinematics for both arms,
             %considering the current mission phase
-            obj.left_arm.update_transform(StateMachine)
-            obj.right_arm.update_transform(StateMachine)
+            obj.left_arm.update_transform()
+            obj.right_arm.update_transform()
+
+            if StateMachine.isGrasped()
+            
+                new_wTo = obj.left_arm.wTt * obj.left_arm.tTo;
+                
+                obj.left_arm.wTo  = new_wTo;
+                obj.right_arm.wTo = new_wTo;
+            
+            else
+                
+                obj.left_arm.tTo  = inv(obj.left_arm.wTt) * obj.left_arm.wTo;
+                obj.right_arm.tTo = inv(obj.right_arm.wTt) * obj.right_arm.wTo;
+            end
             obj.left_arm.update_jacobian()
             obj.right_arm.update_jacobian()
         end

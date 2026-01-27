@@ -78,7 +78,7 @@ classdef panda_arm < handle
         end
 
 
-        function update_transform(obj, StateMachine)
+        function update_transform(obj)
             % Compute forward kinematics of the robot
 
             obj.bTe=getTransform(obj.robot_model.franka,[obj.q',0,0],'panda_link7');
@@ -88,12 +88,6 @@ classdef panda_arm < handle
             % While I'm goint to grasp I update the tTo, dependent on where
             % the tool is, after grasped I've to update wTo, since o is
             % moving with the arm
-            
-            if ~StateMachine.isGrasped()
-                obj.tTo = inv(obj.wTt)*obj.wTo;
-            else
-                obj.wTo = obj.wTt*obj.tTo;
-            end
 
             
         end
