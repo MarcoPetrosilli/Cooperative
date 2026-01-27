@@ -63,6 +63,10 @@ classdef panda_arm < handle
             obj.eTt = [cos(theta) -sin(theta) 0 0;sin(theta) cos(theta) 0 0;0 0 1 tool_length;0 0 0 1];
                        
             obj.wTt = obj.wTe*obj.eTt;
+
+            obj.X_o = [0 0 0 0 0 0]';
+
+            obj.wJo = zeros(6,7);
           
         end
 

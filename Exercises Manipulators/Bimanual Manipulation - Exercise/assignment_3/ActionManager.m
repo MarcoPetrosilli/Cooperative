@@ -65,24 +65,28 @@ classdef ActionManager < handle
                 task.updateReference(bm_system, actual_StateMachine);
                 task.updateJacobian(bm_system);
                 task.updateActivation(bm_system);
-                if inCurrent(i) && ~inPrev(i) && ~task.constrained
+                if inCurrent(i) && ~inPrev(i)
                     task.A = task.A * alpha_in;
-                elseif ~inCurrent(i) && inPrev(i) && ~task.constrained
+                elseif ~inCurrent(i) && inPrev(i)
                     task.A = task.A * alpha_out;
                 elseif ~inCurrent(i) && ~inPrev(i)
                     task.A = task.A * 0;
                 end
             end
-            ydotbar = obj.perform_ICAT(tasks);
 
             if actual_arm.robot_ID == "L"
-
-                actual_arm.X_o = actual_arm.wJo*ydotbar(1:7);
-
-            else
-                actual_arm.X_o = actual_arm.wJo*ydotbar(8:14);
-                
+                bim_task_ID = find(cellfun(@(x) x.task_name == "LB", tasks), 1);        
+            elseif actual_arm.robot_ID == "R"
+                bim_task_ID = find(cellfun(@(x) x.task_name == "RB", tasks), 1);
             end
+
+            tasks_f = tasks;
+            tasks_f{bim_task_ID}.A = task.A * 0;
+
+            ydotbar = obj.perform_ICAT(tasks_f);
+
+            actual_arm.X_o = actual_arm.wJo*ydotbar;
+            
             if actual_StateMachine.isGrasped() || other_StateMachine.isGrasped() 
 
                 actual_arm.Xo_12 = obj.coordinate_velocities(actual_arm, other_arm);
@@ -135,17 +139,25 @@ classdef ActionManager < handle
             tasks{bim_task_ID}.xdotbar = actual_arm.Xo_12(1:6,:);
             
             tasks_lr = [tasks(bim_task_ID), tasks(1:bim_task_ID-1), tasks(bim_task_ID+1:end)];
+
+            % if actual_arm.robot_ID == "L"
+            %     tool_task_ID = find(cellfun(@(x) x.task_name == "LT2", tasks), 1);        
+            % elseif actual_arm.robot_ID == "R"
+            %     tool_task_ID = find(cellfun(@(x) x.task_name == "RT2", tasks), 1);
+            % end
+            % 
+            % tasks_lr(tool_task_ID) = [];
         end
 
         function ydotbar = perform_ICAT(obj, tasks)
-            ydotbar = zeros(14,1);
-            Qp = eye(14);
+            ydotbar = zeros(7,1);
+            Qp = eye(7);
             for i = 1:length(tasks)
                 [Qp, ydotbar] = iCAT_task(tasks{i}.A, tasks{i}.J, ...
                                            Qp, ydotbar, tasks{i}.xdotbar, ...
                                            1e-4, 0.01, 10);
             end
-            [~, ydotbar] = iCAT_task(eye(14), eye(14), Qp, ydotbar, zeros(14,1), 1e-4, 0.01, 10);
+            [~, ydotbar] = iCAT_task(eye(7), eye(7), Qp, ydotbar, zeros(7,1), 1e-4, 0.01, 10);
         end
     end
 end
