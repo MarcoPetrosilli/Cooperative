@@ -1,0 +1,201 @@
+% Add paths
+addpath('./simulation_scripts');
+addpath('./tools');
+addpath('./icat');
+addpath('./robust_robot');
+addpath('./tasks/');
+clc; clear; close all;
+
+% Simulation parameters
+dt = 0.005;
+endTime = 80;
+% Initialize robot model and simulator
+robotModel = UvmsModel();          
+sim = UvmsSim(dt, robotModel, endTime);
+% Initialize Unity interface
+unity = UnityInterface("127.0.0.1");
+
+%% Define tasks and actions
+landing_altitude = 0.1;
+safe_altitude = 2.0;
+
+task_target_attitude = TaskTargetAttitude();        % P1 % da cambiare in modo che punti verso il target
+task_to_altitude = TaskAltitude(landing_altitude,"to_altitude"); % P2
+task_min_safe_altitude = TaskAltitude(safe_altitude,"safe_mode"); % P3
+task_pose = TaskPose();                             % P4
+task_world_alignment = TaskAlignment();             % P5
+task_mantain_xy = TaskMantainxy();                  % P6
+task_tool = TaskTool();                             % P7
+task_still_manip = TaskJoints([0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]'); % P8
+
+%---
+safe_wp_nav_set  = {
+    task_min_safe_altitude,...
+    task_still_manip, ...
+    task_world_alignment,...
+    task_pose};
+
+
+
+landing_set = {
+    task_to_altitude, ...
+    task_mantain_xy, ...
+    task_target_attitude,...
+    task_world_alignment, ...
+    task_still_manip};
+
+manip_set = {
+    task_mantain_xy, ...
+    task_to_altitude,...
+    task_target_attitude,...
+    task_world_alignment, ...
+    task_tool};
+%---
+% unified_set = {task_min_safe_altitude, ...
+%     task_mantain_xy, ...
+%     task_pose, ...
+%     task_world_alignment, ...
+%     task_to_altitude, ...
+%     task_still_manip, ...
+%     task_target_attitude, ...
+%     task_tool};
+
+unified_set = {task_min_safe_altitude, ...
+    task_still_manip, ...
+    task_to_altitude, ...
+    task_mantain_xy, ...
+    task_target_attitude, ...
+    task_world_alignment, ...
+    task_pose, ...
+    task_still_manip, ...
+    task_tool};
+
+%% Define actions and add to ActionManager
+actionManager = ActionManager();
+
+actionManager.addAction(safe_wp_nav_set,"safe_nav");
+actionManager.addAction(landing_set,"landing");
+actionManager.addAction(manip_set,"manipulation");
+actionManager.addUnifiedAction(unified_set);
+
+currentState = "safe_nav";
+
+actionManager.setCurrentAction(currentState);
+
+%% Define desired positions and orientations (world frame)
+w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
+w_arm_goal_orientation = [0, pi, pi/2];
+w_vehicle_goal_position = [10.5, 37.5, -38]';
+w_vehicle_goal_orientation = [0, -0.06, 0.5];
+
+% Set goals in the robot model
+robotModel.setGoal(...
+    w_arm_goal_position,...
+    w_arm_goal_orientation,...
+    w_vehicle_goal_position,...
+    w_vehicle_goal_orientation);
+
+% Initialize the logger
+logger = SimulationLogger(...
+    ceil(endTime/dt)+1,...
+    robotModel,...
+    unified_set);
+
+%% Main simulation loop
+% Transitions trasholds (tuning)
+dist_threshold = 1e-2;                      % to wp [m]
+alt_threshold = landing_altitude + 1e-2;    % landing [m]
+manip_threshold = 1e-2;                     % manipulation [m]
+% Parameters for manipulator
+arm_reach = 0.6;
+armBase_vehicle_dist = 1.2;
+correction_step = 0.1;
+
+for step = 1:sim.maxSteps
+    % 1. Receive altitude from Unity
+    robotModel.altitude = unity.receiveAltitude(robotModel);
+    
+    % === FSM ===
+    switch currentState
+        case "safe_nav"
+            % check that goal is in range for the manipulator
+            target_XY = w_arm_goal_position(1:2);
+            
+            dist_goal_nodule = norm(w_vehicle_goal_position(1:2) - target_XY(1:2));
+            if dist_goal_nodule > (arm_reach + armBase_vehicle_dist) % If original goal is too far:
+                direction = (w_vehicle_goal_position(1:2) - target_XY(1:2)) / dist_goal_nodule;
+                w_vehicle_goal_position(1:2) = w_vehicle_goal_position(1:2) - direction * correction_step;
+                robotModel.setGoal(... % Update robot WP
+                    w_arm_goal_position,...
+                    w_arm_goal_orientation, ...
+                    w_vehicle_goal_position,...
+                    w_vehicle_goal_orientation);
+                fprintf("WP updated: %.2f , %2.f \n", w_vehicle_goal_position(1), w_vehicle_goal_position(2));
+            end
+
+            [~, lin] = CartError(robotModel.wTgv , robotModel.wTv);
+            horiz_dist_xy = norm(lin(1:2));
+            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+                fprintf("WP distance: %.2f \n", horiz_dist_xy);
+            end
+
+            if horiz_dist_xy < dist_threshold
+                currentState = "landing";
+                actionManager.setCurrentAction(currentState);
+                fprintf('t = %.2f s: Waypoint reached. Start LANDING \n', sim.time);
+            end
+            
+        case "landing" % Check altitude and alignment
+            if robotModel.altitude <= alt_threshold
+                currentState = "manipulation";
+                actionManager.setCurrentAction(currentState);
+                fprintf('t = %.2f s: Landing complete. Start MANIPULATION\n', sim.time);
+            end
+            
+        case "manipulation"
+            % veichle is still - only manipulator movement. 
+            [~, lin] = CartError(robotModel.vTg , robotModel.vTt);
+            tool_dist = norm(lin);
+            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+                fprintf("Target distance: %.3f \n", tool_dist);
+                if tool_dist < manip_threshold
+                    fprintf("Target reached - Mission complete \n")
+                end
+            end
+            
+    end % === FSM ===
+    
+
+
+    % 2. Compute control commands for current action
+    [v_nu, q_dot] = actionManager.computeICAT(robotModel);
+
+    % 3. Step the simulator (integrate velocities)
+    sim.step(v_nu, q_dot);
+
+    % 4. Send updated state to Unity
+    unity.send(robotModel);
+
+    % 5. Logging
+    logger.update(sim.time, sim.loopCounter);
+
+    % 6. Optional debug prints
+    if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+        fprintf('t = %.2f s\n', sim.time);
+        fprintf('alt = %.2f m\n', robotModel.altitude);
+        fprintf('pose = [x: %.2f y: %.2f z: %.2f] m\n', robotModel.wTv(1, 4), robotModel.wTv(2, 4), robotModel.wTv(3, 4))
+    end
+
+    % 7. Optional real-time slowdown
+    SlowdownToRealtime(dt);
+end
+
+% Display plots
+logger.plotAll();
+
+% t = 0:dt:endTime;
+% figure;
+% plot(theta, t);
+
+% Clean up Unity interface
+delete(unity);
