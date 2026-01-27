@@ -1,78 +1,19 @@
-% classdef ActionManager < handle
-%     properties
-%         actions = {}      % cell array of actions (each action = stack of tasks)
-%         action_names = {}
-%         currentAction = 1 % index of currently active action
-%         unified_action = {}
-%     end
-% 
-%     methods
-%         function addAction(obj, taskStack, action_name)
-%             % taskStack: cell array of tasks that define an action
-%             obj.actions{end+1} = taskStack;
-%             obj.action_names{end+1} = action_name;
-%         end
-% 
-%         function addUnifiedAction(obj, unified_set)
-%             obj.unified_action = unified_set;
-%         end
-% 
-%         function [v_nu, qdot] = computeICAT(obj, robot)
-%             % Get current action
-%             % tasks = obj.actions{obj.currentAction};
-%             tasks = obj.unified_action;
-% 
-%             % 1. Update references, Jacobians, activations
-%             for i = 1:length(tasks)
-%                 tasks{i}.updateReference(robot);
-%                 tasks{i}.updateJacobian(robot);
-%                 tasks{i}.updateActivation(robot);
-%             end
-% 
-%             % 2. Perform ICAT (task-priority inverse kinematics)
-%             ydotbar = zeros(13,1);
-%             Qp = eye(13);
-%             for i = 1:length(tasks)
-%                 [Qp, ydotbar] = iCAT_task(tasks{i}.A, tasks{i}.J, ...
-%                                            Qp, ydotbar, tasks{i}.xdotbar, ...
-%                                            1e-4, 0.01, 10);
-%             end
-% 
-%             % 3. Last task: residual damping
-%             [~, ydotbar] = iCAT_task(eye(13), eye(13), Qp, ydotbar, zeros(13,1), 1e-4, 0.01, 10);
-% 
-%             % 4. Split velocities for vehicle and arm
-%             qdot = ydotbar(1:7);
-%             v_nu = ydotbar(8:13); % projected on the vehicle frame
-%         end
-% 
-%         function setCurrentAction(obj, actionIndex)
-%             % Switch to a different action
-%             if actionIndex >= 1 && actionIndex <= length(obj.actions)
-%                 obj.currentAction = actionIndex;
-%             else
-%                 error('Action index out of range');
-%             end
-%         end
-%     end
-% end
-
 classdef ActionManager < handle
     properties
         actions = {}          % cell array of actions (each = cell array of tasks)
-        action_names = []     % names of actions
+        action_names = {}     % names of actions
         unified_action = {}   % all tasks (union)
         currentAction = 1     % index of active action
         lastAction = []       % previous action index
         actionSwitchTime = 0  % timer handle
-        transitionDuration = 2.0 % [s] blending duration
+        transitionDuration = 4.0 % [s] blending duration
     end
 
     methods
         function addAction(obj, taskStack, action_name)
             % Add a named action composed of several tasks
             obj.actions{end+1} = taskStack;
-            obj.action_names{end+1} = action_name;
+            obj.action_names{end+1} = char(action_name);
         end
 
         function addUnifiedAction(obj, unified_set)
@@ -81,8 +22,7 @@ classdef ActionManager < handle
         end
 
         function setCurrentAction(obj, actionName)
-            % Switch to another action by name
-            idx = find(strcmp(obj.action_names{:}, "safe_navigation"), 1);
+            idx = find(strcmp(obj.action_names, char(actionName)), 1);
             if isempty(idx)
                 error('Action "%s" not found.', actionName);
             end
@@ -105,7 +45,6 @@ classdef ActionManager < handle
             else
                 alpha = 1;
             end
-            %check discontinuità -> sostituisci con brll shape
 
             % current/previous task sets
             current_tasks = obj.actions{obj.currentAction};
@@ -132,18 +71,20 @@ classdef ActionManager < handle
                 task = tasks{i};
                 task.updateReference(robot);
                 task.updateJacobian(robot);
-
-                if inCurrent(i) && ~inPrev(i)
-                    % entering → fade in
+                if inCurrent(i) && inPrev(i)
+                    task.updateActivation(robot)
+                elseif inCurrent(i) && ~inPrev(i) % entering → fade in
                     task.updateActivation(robot);
-                    task.A = task.A * alpha;
-                elseif ~inCurrent(i) && inPrev(i)
-                    % leaving → fade out
+                    % task.A = task.A * alpha;
+                    task.A = task.A * IncreasingBellShapedFunction(0,obj.transitionDuration,0,1,t);
+                    
+                elseif ~inCurrent(i) && inPrev(i) % leaving → fade out
                     task.updateActivation(robot);
-                    task.A = task.A * (1 - alpha);
-                else
-                    % steady → normal activation
+                    % task.A = task.A * R(1 - alpha);
+                    task.A = task.A * DecreasingBellShapedFunction(0,obj.transitionDuration,0,1,t);
+                else % task not considered
                     task.updateActivation(robot);
+                    task.A = task.A * 0;
                 end
             end
 

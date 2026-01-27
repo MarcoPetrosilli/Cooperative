@@ -9,16 +9,16 @@ classdef TaskAltitude < Task
     
     methods
 
-        function obj = TaskAltitude(desired_altitude,mode)
+        function obj = TaskAltitude(desired_altitude, mode)
             obj.desired_altitude = desired_altitude;
             switch mode
                 case "safe_mode"
                     obj.equality = false;
-                    obj.id = "distance_safe_mode";
+                    obj.id = "Distance Safe Mode";
 
                 case "to_altitude"
                     obj.equality = true;
-                    obj.id = "distance_to_altitude";
+                    obj.id = "Distance to Altitude";
 
                 otherwise
                     obj.equality = false;
@@ -42,7 +42,6 @@ classdef TaskAltitude < Task
                 obj.e = 0;
             else
                 obj.e = robot.altitude * cos(theta_val) - obj.desired_altitude;
-% Altitude è già proiettata
             end
 
             obj.xdotbar = -0.8 * obj.e;
@@ -61,9 +60,8 @@ classdef TaskAltitude < Task
                 delta = 0.5;
     
                 obj.A = DecreasingBellShapedFunction(th,th+delta,0,1,obj.e);
+                
             end   
         end
     end
 end
-
-% Sistema parametro th in update Reference

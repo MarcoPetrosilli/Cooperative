@@ -1,18 +1,17 @@
 classdef TaskAttitude < Task   
     properties
-        id = "attitude";
+        id = "Target Attitude";
     end
 
 
     methods
         function updateReference(obj, robot)
-            [ang, lin] = CartError(robot.wTgv , robot.wTv);
-            obj.xdotbar = -0.2 * ang;
-            % limit thew requested velocities...
+            [ang, ~] = CartError(robot.wTgv , robot.wTv);
+            obj.xdotbar = 0.2 * ang;
             obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.2);
         end
         function updateJacobian(obj, robot)
-            obj.J = [zeros(3,7) zeros(3,3) -robot.wTv(1:3,1:3)];
+            obj.J = [zeros(3,7) zeros(3,3) robot.wTv(1:3,1:3)];
         end
         
         function updateActivation(obj, robot)

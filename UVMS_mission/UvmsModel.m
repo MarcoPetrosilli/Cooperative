@@ -37,7 +37,7 @@ classdef UvmsModel < handle
         vTe         % end-effector wrt vehicle
         vTt         % tool wrt vehicle
         wTt         % tool wrt world
-        wTg         % goal (tool) wrt wolrd
+        wTg         % goal (tool) wrt world
         wTgv        % goal (vehicle) wrt world
         bTe         % end-effector wrt arm base
         vTg         % goal (tool) wrt vehicle
@@ -69,9 +69,10 @@ classdef UvmsModel < handle
             end
 
             % Initialize default state
-            obj.q      = [-0.0031 0 0.0128 -1.2460 0.0137 0.0853 -pi/2]';
+            % obj.q      = [-0.0031 0 0.0128 -1.2460 0.0137 0.0853 -pi/2]';
+            obj.q      = [0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]';
             % obj.eta    = [48.5 11.5 -33 pi/3 pi/3 0]';
-            obj.eta    = [48.5 11.5 -33 pi/3 0 0]';
+            obj.eta    = [15.5 29.5 -37.8 -pi/3 pi/3 pi/2]'; % w_vehicle_goal_position = [10.5, 37.5, -38]';
 
             % Default limits
             obj.jlmin  = [-2.9;-1.6;-2.9;-2.95;-2.9;-1.65;-2.8];
