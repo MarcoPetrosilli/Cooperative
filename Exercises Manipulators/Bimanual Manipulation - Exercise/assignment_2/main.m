@@ -33,7 +33,7 @@ function main()
     
     %Define Object Shape and origin Frame
     obj_length = 0.12;
-    w_obj_pos = [0.5 0 0.5]';
+    w_obj_pos = [0.5 0.2 0.25]';
     w_obj_ori = rotation(0,0,0);
     
     
@@ -44,7 +44,7 @@ function main()
     
     
     %Define Object goal frame (Cooperative Motion)
-    wTog=[rotation(0,0,0) [0.65, -0.35, 4]'; 0 0 0 1];
+    wTog=[rotation(0,0,0) [0.65, -0.35, 0.25]'; 0 0 0 1];
     arm1.set_obj_goal(wTog)
     arm2.set_obj_goal(wTog)
     

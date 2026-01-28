@@ -33,15 +33,15 @@ function main()
 
     % --- Define Object ---
     obj_length = 0.12;
-    w_obj_pos = [0.5 0 0.5]';
-    w_obj_ori = rotation(0, 0, 0);
+    w_obj_pos = [0.5 0 0.4]';
+    w_obj_ori = rotation(0, +pi/4, 0);
 
     % Set goal frames based on object frame
-    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.1 0 0]', rotation(pi, -pi/6, 0));
-    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.1 0 0]', rotation(0, pi+pi/6, 0));
+    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.1*sqrt(2)/2 0 -0.1*sqrt(2)/2]', rotation(pi, -pi/6, 0));
+    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.1*sqrt(2)/2 0 +0.1*sqrt(2)/2]', rotation(0, pi+pi/6, 0));
 
     % Define Object goal frame (Cooperative Motion)
-    wTog = [rotation(0, 0, 0) [0.65, -0.35, 0.25]'; 0 0 0 1];
+    wTog = [rotation(0, +pi/4, 0) [0.65, -0.35, 0.3]'; 0 0 0 1];
     arm1.set_obj_goal(wTog);
     arm2.set_obj_goal(wTog);
 
@@ -50,8 +50,8 @@ function main()
     right_tool_task = tool_task("R", "RT");
     left_tool_task_2 = tool_task_2("L", "LT2");
     right_tool_task_2 = tool_task_2("R", "RT2");
-    left_min_altitude = ee_altitude_task("L", "LA", 0.15);
-    right_min_altitude = ee_altitude_task("R", "RA", 0.15);
+    left_min_altitude = ee_altitude_task("L", "LA", 0.1);
+    right_min_altitude = ee_altitude_task("R", "RA", 0.1);
     left_joint_limits_task = joint_limits_task("L", "LL");
     right_joint_limits_task = joint_limits_task("R", "RL");
     left_bim_constraint_task = bim_rigid_const_task("L", "LB");
@@ -59,15 +59,15 @@ function main()
 
     % --- Define Action Sets (LEFT) ---
     l_go_to_grasp_set = {left_joint_limits_task, left_min_altitude, left_tool_task};
-    l_move_grasped_obj_set = {left_joint_limits_task, left_min_altitude, left_tool_task_2, left_bim_constraint_task};
+    l_move_grasped_obj_set = {left_joint_limits_task, left_min_altitude, left_tool_task_2};
     l_final_set = {left_min_altitude};
-    l_unified_set = {left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2, left_bim_constraint_task};
+    l_unified_set = {left_bim_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
 
     % --- Define Action Sets (RIGHT) ---
     r_go_to_grasp_set = {right_joint_limits_task, right_min_altitude, right_tool_task};
-    r_move_grasped_obj_set = {right_joint_limits_task, right_min_altitude, right_tool_task_2, right_bim_constraint_task};
+    r_move_grasped_obj_set = {right_joint_limits_task, right_min_altitude, right_tool_task_2};
     r_final_set = {right_min_altitude};
-    r_unified_set = {right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2, right_bim_constraint_task};
+    r_unified_set = {right_bim_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
 
     % --- Initialize LEFT Action Manager ---
     l_actionManager = ActionManager();
@@ -139,11 +139,18 @@ function main()
         Xo_12 = [Xo_12 arm1.Xo_12];
     end
 
-    % Plotting
-    action = 1;
-    tasks = [1];
-    logger.plotAll(action, tasks);
+    fprintf('Plotting Left Arm Activations...\n');
+    l_actionManager.plotActivations(dt);
+    
+    % Plot delle attivazioni per il braccio destro
+    fprintf('Plotting Right Arm Activations...\n');
+    r_actionManager.plotActivations(dt);
 
+    % % Plotting
+    % action = 1;
+    % tasks = [1];
+    % logger.plotAll(action, tasks);
+    % 
     t = 0:dt:end_time;
     d = timeseries(dist, t);
     figure;

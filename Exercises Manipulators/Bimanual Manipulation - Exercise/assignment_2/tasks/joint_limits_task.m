@@ -2,7 +2,7 @@ classdef joint_limits_task < Task
     
     properties
         threshold = 0.2;
-        k = 0.5
+        lambda = 0.5
         constrained = false;
     end
 
@@ -19,8 +19,20 @@ classdef joint_limits_task < Task
                 robot=robot_system.right_arm;    
             end
             
+            obj.xdotbar = zeros(7,1);
+
             
-            obj.xdotbar = 0.2 * robot.q;
+            for i = 1:7
+                dist_min = robot.q(i) - robot.jlmin(i);
+                dist_max = robot.jlmax(i) - robot.q(i);
+        
+                if dist_min < obj.threshold
+                    obj.xdotbar(i) = obj.lambda * (obj.threshold - dist_min);
+                elseif dist_max < obj.threshold
+                    obj.xdotbar(i) = -obj.lambda * (obj.threshold - dist_max);
+                end
+            end
+
             obj.xdotbar(1:7) = Saturate(obj.xdotbar(1:7), 0.3);
 
         end

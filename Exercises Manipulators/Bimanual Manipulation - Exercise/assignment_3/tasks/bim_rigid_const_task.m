@@ -13,6 +13,14 @@ classdef bim_rigid_const_task < Task
         function updateReference(obj, robot_system, StateMachine)
 
             obj.xdotbar = zeros(6, 1);
+            
+            if(obj.ID=='L')
+                obj.xdotbar = robot_system.left_arm.X_o;
+            elseif(obj.ID=='R')
+                obj.xdotbar = robot_system.right_arm.X_o;    
+            end
+            
+
         end
 
 
@@ -23,7 +31,7 @@ classdef bim_rigid_const_task < Task
                 robot=robot_system.right_arm;    
             end
             
-            obj.J=robot.wJt;
+            obj.J=robot.wJo;
         end
 
         function updateActivation(obj, robot_system)
