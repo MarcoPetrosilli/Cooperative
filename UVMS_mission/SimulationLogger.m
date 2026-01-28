@@ -65,9 +65,30 @@ classdef SimulationLogger < handle
             legend('xdot','ydot','zdot','omega_x','omega_y','omega_z');
 
             % Optional: plot task activations
-            figure(3);
-            for i = 1:size(obj.a,3)
-                subplot(size(obj.a,3),1,i);
+            % figure(3);
+            % for i = 1:size(obj.a,3)
+            %     subplot(size(obj.a,3),1,i);
+            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     title(['Task', num2str(i), obj.task_set{i}.id]);
+            % end
+
+
+            % Inseriti da me
+            figure(3)
+            for i = 1:3
+                subplot(3,1,i);
+                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                title(['Task', num2str(i), obj.task_set{i}.id]);
+            end
+            figure(4)
+            for i = 4:6
+                subplot(3,1,i-3);
+                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                title(['Task', num2str(i), obj.task_set{i}.id]);
+            end
+            figure(5)
+            for i = 7:9
+                subplot(3,1,i-6);
                 plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
                 title(['Task', num2str(i), obj.task_set{i}.id]);
             end

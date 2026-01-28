@@ -6,7 +6,7 @@ classdef ActionManager < handle
         currentAction = 1     % index of active action
         lastAction = []       % previous action index
         actionSwitchTime = 0  % timer handle
-        transitionDuration = 4.0 % [s] blending duration
+        transitionDuration = 5.0 % [s] blending duration
     end
 
     methods
@@ -41,9 +41,8 @@ classdef ActionManager < handle
             % compute blending ratio
             if obj.actionSwitchTime ~= 0
                 t = toc(obj.actionSwitchTime);
-                alpha = min(t / obj.transitionDuration, 1);
             else
-                alpha = 1;
+                t = obj.transitionDuration;
             end
 
             % current/previous task sets

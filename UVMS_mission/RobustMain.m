@@ -1,3 +1,4 @@
+%% 
 % Add paths
 addpath('./simulation_scripts');
 addpath('./tools');
@@ -7,18 +8,21 @@ addpath('./tasks/');
 clc; clear; close all;
 
 % Simulation parameters
-dt = 0.005;
-endTime = 90;
+dt = 0.01;
+endTime = 60;
 % Initialize robot model and simulator
 robotModel = UvmsModel();          
 sim = UvmsSim(dt, robotModel, endTime);
 % Initialize Unity interface
 unity = UnityInterface("127.0.0.1");
 
+
+
 %% Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
-w_vehicle_goal_position = [10.5, 37.5, -38]';
+% w_vehicle_goal_position = [10.5, 37.5, -38]';
+w_vehicle_goal_position = [9.5, 38.5, -38]';
 w_vehicle_goal_orientation = [0, -0.06, 0.5];
 
 % Set goals in the robot model
@@ -33,16 +37,16 @@ robotModel.setGoal(...
 landing_altitude = 0.1;
 safe_altitude = 2.0;
 % Transitions trasholds (tuning)
-dist_threshold = 1e-2;                     % to wp [m]
+dist_threshold = 1e-1;                     % to wp [m]
 manip_threshold = 1e-1;
-ang_threshold = 1e-2;
+ang_threshold = 0.15;
 alt_threshold = landing_altitude + 1e-2;   % landing [m]
 tool_threshold = 1e-2;                     % manipulation [m]
 % Parameters for manipulator
-arm_reach = 6e-1;
-armBase_vehicle_dist = 13e-1;
+arm_reach = 0.6;
+armBase_vehicle_dist = 1.0;
 % Task list
-task_target_attitude = TaskTargetAttitude();
+task_target_attitude = TaskTargetAlignment();
 task_to_altitude = TaskAltitudeControl(landing_altitude, "to_altitude"); 
 task_min_safe_altitude = TaskAltitudeControl(safe_altitude, "safe_mode"); 
 task_pose = TaskPoseControl();                             
@@ -62,12 +66,11 @@ safe_wp_nav_set  = {
     };
 
 manipulability_check = {
-    task_still_manip, ...
-    task_target_attitude,...
-    task_manipulability_check, ...
     task_min_safe_altitude, ...
     task_horizontal_attitude, ...
-    task_look_ahead, ...
+    task_still_manip, ...
+    task_target_attitude,...
+    task_manipulability_check, ... 
 };
 
 landing_set = {
@@ -119,6 +122,7 @@ logger = SimulationLogger(...
 %% Main simulation loop
 
 for step = 1:sim.maxSteps
+    logging_disp = mod(sim.loopCounter, round(1 / sim.dt));
     % 1. Receive altitude from Unity
     robotModel.altitude = unity.receiveAltitude(robotModel);
     
@@ -128,7 +132,7 @@ for step = 1:sim.maxSteps
         case "Safe Navigation"
             [~, lin] = CartError(robotModel.wTgv , robotModel.wTv);
             horiz_dist_xy = norm(lin(1:2));
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+            if logging_disp == 0
                 fprintf("WP distance: %.2f m\n", horiz_dist_xy);
             end
             if horiz_dist_xy < dist_threshold
@@ -136,7 +140,7 @@ for step = 1:sim.maxSteps
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Waypoint reached. Start Manipulability Check \n', sim.time);
             end
-        case "Manipulability Check"
+        case "Manipulability Check" % manipulability and alignment
             % Manipulator base to target distance
             w_Tool_goal_XY = robotModel.goalPosition(1:2); % nodule
             w_Vehicle_XY = robotModel.wTv(1:2,4);
@@ -159,7 +163,7 @@ for step = 1:sim.maxSteps
             [ang, ~] = CartError(wT_target, robotModel.wTv);
             ang_err = norm(ang);
 
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+            if logging_disp == 0
                 fprintf("Distance to reachability: %.2f m\n", manip_err);
                 fprintf("Angular error to target: %.2f rad\n", ang_err);
             end
@@ -168,18 +172,19 @@ for step = 1:sim.maxSteps
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Target in manipulation range. Start Landing \n', sim.time);
             end
-        case "Landing" % Check altitude and alignment
+        case "Landing"
             if robotModel.altitude <= alt_threshold
                 currentState = "Manipulation";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Landing complete. Start Manipulation \n', sim.time);
+                robotModel.stablePos = robotModel.wTv(1:2,4);
             end
             
         case "Manipulation"
             % veichle is still - only manipulator movement. 
             [~, lin] = CartError(robotModel.vTg , robotModel.vTt);
             tool_dist = norm(lin);
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+            if logging_disp == 0
                 fprintf("Target distance: %.3f \n", tool_dist);
                 if tool_dist < tool_threshold
                     fprintf("Target reached - Mission complete \n")
@@ -203,7 +208,7 @@ for step = 1:sim.maxSteps
     logger.update(sim.time, sim.loopCounter);
 
     % 6. Optional debug prints
-    if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+    if logging_disp == 0
         fprintf('t = %.2f s\n', sim.time);
         fprintf('Alt = %.2f m\n', robotModel.altitude);
         fprintf('Pose : \n \t x = %.2f m\n \t y = %.2f m\n \t z = %.2f m\n]\n', robotModel.wTv(1, 4), robotModel.wTv(2, 4), robotModel.wTv(3, 4))

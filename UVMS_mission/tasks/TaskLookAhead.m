@@ -3,7 +3,6 @@ classdef TaskLookAhead < Task
         id = "Look Ahead";
     end
 
-
     methods
         function updateReference(obj, robot)
 
@@ -22,7 +21,7 @@ classdef TaskLookAhead < Task
             yaw_wv = atan2(vy, vx);
             
             if speedXY > vel_threshold
-                R_target = [cos(yaw_wv) -sin(yaw_wv) 0; % Roll = Pitch = 0, Yaw = yaw_velocity
+                R_target = [cos(yaw_wv) -sin(yaw_wv) 0; % yaw = yaw_velocity
                             sin(yaw_wv) cos(yaw_wv) 0;
                             0 0 1];
                 wT_target = eye(4);
@@ -34,16 +33,9 @@ classdef TaskLookAhead < Task
                 obj.xdotbar = Saturate(obj.xdotbar, 0.8);
             end
         end
-            
-
-
-
-            
-        
         function updateJacobian(obj, robot)
             obj.J = [zeros(3,7) zeros(3,3) robot.wTv(1:3,1:3)];
         end
-        
         function updateActivation(obj, robot)
             obj.A = eye(3);
         end
