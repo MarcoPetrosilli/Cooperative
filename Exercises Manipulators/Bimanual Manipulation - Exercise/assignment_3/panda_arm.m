@@ -69,7 +69,9 @@ classdef panda_arm < handle
             obj.wTt = obj.wTe*obj.eTt;
 
             obj.robot_ID = robot_ID;
-          
+
+            obj.X_o = zeros(6,1);  
+            obj.wJo = zeros(6,7);
         end
 
         function setGoal(obj,obj_position,obj_orientation,arm_dist_offset,arm_rot_offset)
