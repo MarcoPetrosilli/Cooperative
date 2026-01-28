@@ -35,16 +35,22 @@ function main()
     bm_sim = bimanual_sim(dt, arm1, arm2, end_time);
 
     % --- Define Object ---
-    obj_length = 0.12;
-    w_obj_pos = [0.5 0 0.4]';
-    w_obj_ori = rotation(0, +pi/4, 0);
+    obj_length = 0.6;
+    w_obj_pos = [0.5 0 0.59]';
+    w_obj_ori = rotation(0, 0, 0);
 
     % Set goal frames based on object frame
-    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.1*sqrt(2)/2 0 -0.1*sqrt(2)/2]', rotation(pi, -pi/6, 0));
-    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.1*sqrt(2)/2 0 +0.1*sqrt(2)/2]', rotation(0, pi+pi/6, 0));
+    % arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [0 0 -0.05]', rotation(pi, -deg2rad(20), 0));
+    % arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.05 0 +0.05]', rotation(0, pi+deg2rad(20), 0));
+    
+    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.05 0 0]', rotation(pi, -deg2rad(20), 0));
+    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.05 0 0]', rotation(0, pi+deg2rad(20), 0));
 
     % Define Object goal frame (Cooperative Motion)
-    wTog = [rotation(0, +pi/4, 0) [0.65, -0.35, 0.3]'; 0 0 0 1];
+    % wTog = [rotation(0, +pi/4, 0) [0.65, -0.35, 0.3]'; 0 0 0 1];
+
+    wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.3]'; 0 0 0 1];
+ 
     arm1.set_obj_goal(wTog);
     arm2.set_obj_goal(wTog);
 
@@ -53,7 +59,11 @@ function main()
     right_tool_task = tool_task("R", "RT");
     left_tool_task_2 = tool_task_2("L", "LT2");
     right_tool_task_2 = tool_task_2("R", "RT2");
+
+    left_min_altitude = ee_altitude_task("L", "LA", 0.3);
+
     left_min_altitude = ee_altitude_task("L", "LA", 0.15);
+
     right_min_altitude = ee_altitude_task("R", "RA", 0.15);
     left_joint_limits_task = joint_limits_task("L", "LL");
     right_joint_limits_task = joint_limits_task("R", "RL");
@@ -103,6 +113,7 @@ function main()
         
         % 1. Receive UDP packets
         [ql, qr] = robot_udp.udp_receive(t);
+        
         if real_robot
             bm_sim.left_arm.q = ql;
             bm_sim.right_arm.q = qr;
@@ -121,8 +132,13 @@ function main()
                q_dot_r = r_actionManager.perform_ICAT(r_actionManager.unified_action);
         end
 
-        ql = q_dot_l*arm1.wJo;
-        qr = q_dot_r*arm2.wJo;
+<<<<<<< HEAD
+        Xl = arm1.wJo*q_dot_l;
+        Xr = arm2.wJo*q_dot_r;
+=======
+        ql = arm1.wJo*q_dot_l;
+        qr = arm2.wJo*q_dot_r;
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
 
         q_dot = [q_dot_l; q_dot_r];
 
@@ -146,8 +162,13 @@ function main()
         [a, v] = CartError(arm1.wTt , arm2.wTt);
         dist = [dist norm(v)];
     
+<<<<<<< HEAD
+        xl = [xl Xl];
+        xr = [xr Xr];
+=======
         xl = [xl ql];
         xr = [xl qr];
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
         X_o1 = [X_o1 arm1.X_o];
         X_o2 = [X_o2 arm2.X_o];
         Xo_12_arm1 = [Xo_12_arm1 arm1.Xo_12];
@@ -172,10 +193,20 @@ function main()
     plot(d);
     hold on
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
 
     tg_pos = find(t == arm1.tg);
+<<<<<<< HEAD
+    % tf_pos = find(t == arm1.tf);
+    t = t(tg_pos:end);
+    X_o1_ = X_o1(:, tg_pos:end);
+    X_o2_ = X_o2(:, tg_pos:end);
+    xl = xl(:, tg_pos:end);
+    xr = xr(:, tg_pos:end);
+    Xo_12_arm1 = Xo_12_arm1(:, tg_pos:end);
+    Xo_12_arm2 = Xo_12_arm2(:, tg_pos:end);
+=======
     tf_pos = find(t == arm1.tf);
     t = t(tg_pos:tf_pos);
     X_o1_ = X_o1(:, tg_pos:tf_pos);
@@ -184,24 +215,33 @@ function main()
     xr = xr(:, tg_pos:tf_pos);
     Xo_12_arm1 = Xo_12_arm1(:, tg_pos:tf_pos);
     Xo_12_arm2 = Xo_12_arm2(:, tg_pos:tf_pos);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
 
     X_o1_1 = timeseries(X_o1_(1,:), t);
     X_o2_1 = timeseries(X_o2_(1,:), t);
     xl_1 = timeseries(xl(1,:), t);
     xr_1 = timeseries(xr(1,:), t);
     Xo_12_arm1_1 = timeseries(Xo_12_arm1(1,:), t);
+<<<<<<< HEAD
+=======
     Xo_12_arm2_1 = timeseries(Xo_12_arm2(1,:), t);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     figure;
     subplot(2,3,1);
     plot(X_o1_1);
     hold on;
     plot(X_o2_1);
     plot(Xo_12_arm1_1);
+<<<<<<< HEAD
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+=======
     % plot(Xo_12_arm2_1);
     plot(xl_1);
     plot(xr_1);
     hold off
     legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     title('X_ang');
 
     X_o1_2 = timeseries(X_o1_(2,:), t);
@@ -209,7 +249,10 @@ function main()
     xl_2 = timeseries(xl(2,:), t);
     xr_2 = timeseries(xr(2,:), t);
     Xo_12_arm1_2 = timeseries(Xo_12_arm1(2,:), t);
+<<<<<<< HEAD
+=======
     Xo_12_arm2_2 = timeseries(Xo_12_arm2(2,:), t);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     subplot(2,3,2);
     plot(X_o1_2);
     hold on;
@@ -217,11 +260,16 @@ function main()
     plot(xl_2);
     plot(xr_2);
     plot(Xo_12_arm1_2);
+<<<<<<< HEAD
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+=======
     % plot(Xo_12_arm2_2);
     plot(xl_2);
     plot(xr_2);
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1', 'Xo12ar21');
+    legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     title('Y_ang');
 
     X_o1_3 = timeseries(X_o1_(3,:), t);
@@ -229,15 +277,25 @@ function main()
     xl_3 = timeseries(xl(3,:), t);
     xr_3 = timeseries(xr(3,:), t);
     Xo_12_arm1_3 = timeseries(Xo_12_arm1(3,:), t);
+<<<<<<< HEAD
+=======
     Xo_12_arm2_3 = timeseries(Xo_12_arm2(3,:), t);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     subplot(2,3,3);
     plot(X_o1_3);
     hold on;
     plot(X_o2_3);
     plot(Xo_12_arm1_3);
-    plot(Xo_12_arm2_3);
+<<<<<<< HEAD
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1', 'Xo12ar21');
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+=======
+    % plot(Xo_12_arm2_3);
+    plot(xl_3);
+    plot(xr_3);
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     title('Z_ang');
 
     X_o1_4 = timeseries(X_o1_(4,:), t);
@@ -245,15 +303,25 @@ function main()
     xl_4 = timeseries(xl(4,:), t);
     xr_4 = timeseries(xr(4,:), t);
     Xo_12_arm1_4 = timeseries(Xo_12_arm1(4,:), t);
+<<<<<<< HEAD
+=======
     Xo_12_arm2_4 = timeseries(Xo_12_arm2(4,:), t);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     subplot(2,3,4);
     plot(X_o1_4);
     hold on;
     plot(X_o2_4);
     plot(Xo_12_arm1_4);
-    plot(Xo_12_arm2_4);
+<<<<<<< HEAD
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1', 'Xo12ar21');
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+=======
+    % plot(Xo_12_arm2_4);
+    plot(xl_4);
+    plot(xr_4);
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     title('X_lin');
 
     X_o1_5 = timeseries(X_o1_(5,:), t);
@@ -261,15 +329,25 @@ function main()
     xl_5 = timeseries(xl(5,:), t);
     xr_5 = timeseries(xr(5,:), t);
     Xo_12_arm1_5 = timeseries(Xo_12_arm1(5,:), t);
+<<<<<<< HEAD
+=======
     Xo_12_arm2_5 = timeseries(Xo_12_arm2(5,:), t);
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     subplot(2,3,5);
     plot(X_o1_5);
     hold on;
     plot(X_o2_5);
     plot(Xo_12_arm1_5);
-    plot(Xo_12_arm2_5);
+<<<<<<< HEAD
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1', 'Xo12ar21');
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+=======
+    % plot(Xo_12_arm2_5);
+    plot(xl_5);
+    plot(xr_5);
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
     title('Y_lin');
 
     X_o1_6 = timeseries(X_o1_(6,:), t);
@@ -283,10 +361,74 @@ function main()
     hold on;
     plot(X_o2_6);
     plot(Xo_12_arm1_6);
+<<<<<<< HEAD
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1');
+    title('Z_lin');
+
+    figure;
+    subplot(2,3,1);
+    plot(Xo_12_arm1_1);
+    hold on;
+    plot(xl_1);
+    plot(xr_1);
+    hold off
+    legend('Xo12arm1', 'xl', 'xr');
+    title('X_ang');
+
+    subplot(2,3,2);
+    plot(Xo_12_arm1_2);
+    hold on;
+    plot(xl_2);
+    plot(xr_2);
+    hold off
+    legend('Xo12arm1', 'xl', 'xr');
+    title('Y_ang');
+
+    subplot(2,3,3);
+    plot(Xo_12_arm1_3);
+    hold on;
+    plot(xl_3);
+    plot(xr_3);
+    hold off
+    legend('Xo12arm1', 'xl', 'xr');
+    title('Z_ang');
+
+    subplot(2,3,4);
+    plot(Xo_12_arm1_4);
+    hold on;
+    plot(xl_4);
+    plot(xr_4);
+    hold off
+    legend('Xo12arm1', 'xl', 'xr');
+    title('X_lin');
+
+    subplot(2,3,5);
+    plot(Xo_12_arm1_5);
+    hold on;
+    plot(xl_5);
+    plot(xr_5);
+    hold off
+    legend('Xo12arm1', 'xl', 'xr');
+    title('Y_lin');
+
+    subplot(2,3,6);
+    plot(Xo_12_arm1_6);
+    hold on;
+    plot(xl_6);
+    plot(xr_6);
     plot(Xo_12_arm2_6);
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1', 'Xo12ar21');
+    legend('Xo12arm1', 'xl', 'xr', 'Xo12arm2');
     title('Z_lin');
+=======
+    % plot(Xo_12_arm2_6);
+    plot(xl_6);
+    plot(xr_6);
+    hold off
+    legend('Xo1', 'Xo2', 'Xo12arm1', 'xl', 'xr');
+    title('Z_lin');
+>>>>>>> 19775695265022b3546a8d5afabea6ec789423a9
 end
 
 

@@ -24,13 +24,13 @@ classdef joint_limits_task < Task
 
             
             for i = 1:7
-                dist_min = abs(robot.q(i) - robot.jlmin(i));
-                dist_max = abs(robot.jlmax(i) - robot.q(i));
+                dist_min = -obj.lambda * (robot.jlmin(i) + obj.threshold - robot.q(i));
+                dist_max = obj.lambda * (robot.jlmax(i) - obj.threshold - robot.q(i));
         
-                if dist_min < obj.threshold
-                    obj.xdotbar(i) = obj.lambda * (obj.threshold - dist_min);
-                elseif dist_max < obj.threshold
-                    obj.xdotbar(i) = -obj.lambda * (obj.threshold - dist_max);
+                if abs(dist_min) < obj.threshold
+                    obj.xdotbar(i) = dist_min;
+                elseif abs(dist_max) < obj.threshold
+                    obj.xdotbar(i) = dist_max;
                 end
             end
 
