@@ -45,7 +45,7 @@ classdef ee_altitude_task < Task
             obj.A = eye(6);
 
             th = obj.desired_altitude;
-            delta = 0.1;
+            delta = 0.05;
 
             obj.A = DecreasingBellShapedFunction(th,th+delta,0,1,obj.altitude);
         end

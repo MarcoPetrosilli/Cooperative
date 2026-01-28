@@ -252,8 +252,9 @@ classdef ActionManager < handle
                     task.A = task.A * alpha_in;
                 elseif ~inCurrent(i) && inPrev(i)
                     task.A = task.A * alpha_out;
-                elseif ~inCurrent(i) && ~inPrev(i)
+                elseif ~inCurrent(i) && ~inPrev(i) && ~task.constrained
                     task.A = task.A * 0;
+                elseif ~task.constrained
                 end
                 
                 current_act = diag(task.A)'; % Trasposta per avere riga
@@ -272,13 +273,10 @@ classdef ActionManager < handle
             % Qui sotto usi 'task.A' ma 'task' è l'ultimo del ciclo for!
             % Correzione consigliata: usa tasks{bim_task_ID}.A invece di task.A
             
-
-             % FIX: usa l'elemento specifico
-            ydotbar = obj.perform_ICAT(tasks);
+            tasks_f = tasks;
+            tasks_f{bim_task_ID}.A = tasks_f{bim_task_ID}.A * 0; % FIX: usa l'elemento specifico
+            ydotbar = obj.perform_ICAT(tasks_f);
             actual_arm.X_o = actual_arm.wJo*ydotbar;
-            
-            tasks{bim_task_ID}.A = eye(6);
-
          
         end
         

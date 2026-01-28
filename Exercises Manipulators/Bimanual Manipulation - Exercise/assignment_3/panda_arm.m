@@ -70,7 +70,8 @@ classdef panda_arm < handle
 
             obj.robot_ID = robot_ID;
 
-            obj.X_o = zeros(6,1);  
+            obj.X_o = zeros(6,1); 
+            obj.Xo_12 = zeros(6,1); 
             obj.wJo = zeros(6,7);
         end
 
