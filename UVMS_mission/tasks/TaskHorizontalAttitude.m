@@ -20,9 +20,9 @@ classdef TaskHorizontalAttitude < Task
                 obj.theta = 2*pi+obj.theta;
             end
 
-            obj.xdotbar = -0.2 * (0.1-obj.theta);
+            obj.xdotbar = -0.9 * (0.1-obj.theta);
 
-            obj.xdotbar = Saturate(obj.xdotbar, 0.2);
+            obj.xdotbar = Saturate(obj.xdotbar, 0.3);
         
             theta = [theta; obj.theta];
 
