@@ -17,7 +17,7 @@ classdef TaskLookAhead < Task
             vx = w_vel_v(1);
             vy = w_vel_v(2);
             
-            vel_threshold = 0.01;
+            vel_threshold = 1e-2;
             speedXY = norm([vx, vy]);
             yaw_wv = atan2(vy, vx);
             

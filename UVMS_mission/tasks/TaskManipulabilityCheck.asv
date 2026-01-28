@@ -63,21 +63,23 @@ classdef TaskManipulabilityCheck < Task
         id = "Manipulability";
         arm_length;
         armBase_distance;
+        manip_threshold;
         err;
         lin;
         yaw
     end
 
     methods
-        function obj = TaskManipulabilityCheck(arm_reaach, armBase_vehicle_dist)
+        function obj = TaskManipulabilityCheck(arm_reaach, armBase_vehicle_dist, manip_threshold)
             obj.arm_length = arm_reaach;
             obj.armBase_distance = armBase_vehicle_dist;
+            obj.manip_threshold = manip_threshold;
             obj.xdotbar = zeros(2,1);
         end
         function updateReference(obj, robot)
             obj.err = inf; % init value
             obj.yaw = 0.0;
-            manip_threshold = 1e-2;
+
             w_Tool_goal_XY = robot.goalPosition(1:2); % nodule
             w_Vehicle_XY = robot.wTv(1:2,4);
             dist_to_nodule = norm(w_Vehicle_XY - w_Tool_goal_XY);
@@ -85,7 +87,7 @@ classdef TaskManipulabilityCheck < Task
             obj.err = dist_to_nodule - (obj.arm_length + obj.armBase_distance);
 
 
-            if obj.err > manip_threshold % If original goal is too far:
+            if obj.err < obj.manip_threshold % If original goal is too far:
                 obj.lin = w_Tool_goal_XY - w_Vehicle_XY;
                 obj.lin = obj.lin(:);  % column vector
 
@@ -94,8 +96,8 @@ classdef TaskManipulabilityCheck < Task
                 obj.yaw = atan2(obj.lin(2), obj.lin(1)); % Calculate yaw angle
                 R_yaw = [cos(obj.yaw) -sin(obj.yaw); sin(obj.yaw) cos(obj.yaw)];
 
-                obj.xdotbar = 0.9 * R_yaw * obj.lin;
-                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.1);
+                obj.xdotbar = 0.8 * R_yaw * obj.lin;
+                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
             end
 
         end
@@ -116,11 +118,10 @@ classdef TaskManipulabilityCheck < Task
             ang_err = norm(ang);
 
             th = 0;
-            delta_ang = 1e-2; 
-            delta_manip = 5e-2;
-            act_ang_err = DecreasingBellShapedFunction(th, th + delta_ang, 0, 1, ang_err);
-            act_manip_err = IncreasingBellShapedFunction(th, th + delta_manip, 0, 1, abs(obj.err));
-            obj.A = eye(2) * (act_manip_err * act_ang_err);
+            delta = 0.3; 
+            act_yaw_err = DecreasingBellShapedFunction(th, th + delta, 0, 1, ang_err);
+            act_manip_err = IncreasingBellShapedFunction(th, th + delta, 0, 1, obj.err);
+            obj.A = eye(2) * (act_manip_err * act_yaw_err);
         end 
     end
 end
