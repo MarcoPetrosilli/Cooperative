@@ -3,7 +3,6 @@ classdef TaskTargetAttitude < Task
         id = "Nodule Alignment";
     end
 
-
     methods
         function updateReference(obj, robot)
             wPv = robot.wTv(1:3,4);
