@@ -65,31 +65,35 @@ classdef SimulationLogger < handle
             legend('xdot','ydot','zdot','omega_x','omega_y','omega_z');
 
             % Optional: plot task activations
-            figure(3);
+            % figure(3);
             n_cols = 3;
             n = ceilDiv(size(obj.a,3),n_cols);
             for i = 1:size(obj.a,3)
-                subplot(n ,n_cols,i);
-                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                figure(i+2)
+                % subplot(n ,n_cols,i);
+                set(gca, 'ColorOrder', [0 0 0], 'NextPlot', 'replacechildren');
+                plot(obj.t, squeeze(obj.a(:, :, i))','k', 'LineWidth', 1);
                 ylim([0,1]);
                 grid on;
                 title(['Task', num2str(i), obj.task_set{i}.id]);
             end
 
-
-            % % Inseriti da me
-            % figure(3)
-            % for i = 1:5
-            %     subplot(5,1,i);
-            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-            %     title(['Task', num2str(i), obj.task_set{i}.id]);
+            % for i = 1:size(obj.a,3)
+            %     ax = subplot(n, n_cols, i);
+            % 
+            %     plot(ax, obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     ylim(ax, [0, 1]);
+            %     grid(ax, 'on');
+            % 
+            %     task_id = obj.task_set{i}.id;
+            %     title(ax, ['Task ', num2str(i), ' ', task_id]);
+            % 
+            %     filename = sprintf('Task_%02d_%s.png', i, task_id);
+            % 
+            %     % Salvataggio corretto in PNG
+            %     exportgraphics(ax, filename, 'Resolution', 300);
             % end
-            % figure(4)
-            % for i = 6:11
-            %     subplot(6,1,i-5);
-            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-            %     title(['Task', num2str(i), obj.task_set{i}.id]);
-            % end
+           
         end 
     end
 end
