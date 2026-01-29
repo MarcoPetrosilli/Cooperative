@@ -1,12 +1,14 @@
 classdef TaskPoseControl < Task   
     properties
         id = "Pose Control";
+        err;
     end
 
     methods
         function updateReference(obj, robot)
             [ang, lin] = CartError(robot.wTgv , robot.wTv);
             obj.xdotbar = 0.4 * [ang; lin];
+            obj.err = norm(lin(1:2));
             obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.3);
             obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end

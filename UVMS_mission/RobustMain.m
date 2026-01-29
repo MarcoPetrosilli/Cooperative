@@ -21,8 +21,7 @@ unity = UnityInterface("127.0.0.1");
 %% Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
-% w_vehicle_goal_position = [10.5, 37.5, -38]';
-w_vehicle_goal_position = [9.5, 38.5, -38]';
+w_vehicle_goal_position = [10.5, 37.5, -38]';
 w_vehicle_goal_orientation = [0, -0.06, 0.5];
 
 % Set goals in the robot model
@@ -39,7 +38,7 @@ safe_altitude = 2.0;
 % Transitions trasholds (tuning)
 dist_threshold = 1e-1;                     % to wp [m]
 manip_threshold = 1e-1;
-ang_threshold = 0.15;
+ang_threshold = 0.1;
 alt_threshold = landing_altitude + 1e-2;   % landing [m]
 tool_threshold = 1e-2;                     % manipulation [m]
 % Parameters for manipulator
@@ -89,7 +88,8 @@ manip_set = {
     task_tool, ...
     };
 %---
-unified_set = {task_min_safe_altitude, ...
+unified_set = {
+    task_min_safe_altitude, ...
     task_still_manip, ...
     task_to_altitude, ...
     task_target_attitude, ...
@@ -130,44 +130,20 @@ for step = 1:sim.maxSteps
     switch currentState
 
         case "Safe Navigation"
-            [~, lin] = CartError(robotModel.wTgv , robotModel.wTv);
-            horiz_dist_xy = norm(lin(1:2));
             if logging_disp == 0
-                fprintf("WP distance: %.2f m\n", horiz_dist_xy);
+                fprintf("WP distance: %.2f m\n", task_pose.err);
             end
-            if horiz_dist_xy < dist_threshold
+            if task_pose.err < dist_threshold % ma se nella simulazione non ci arriva mai, va bene così o deve essere nullo perchè equality
                 currentState = "Manipulability Check";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Waypoint reached. Start Manipulability Check \n', sim.time);
             end
         case "Manipulability Check" % manipulability and alignment
-            % Manipulator base to target distance
-            w_Tool_goal_XY = robotModel.goalPosition(1:2); % nodule
-            w_Vehicle_XY = robotModel.wTv(1:2,4);
-            dist_to_nodule = norm(w_Vehicle_XY - w_Tool_goal_XY);
-            manip_err = dist_to_nodule - (arm_reach + armBase_vehicle_dist);
-
-            % Ang err to target
-            wPv = robotModel.wTv(1:3,4);
-            wPg = robotModel.wTg(1:3,4);
-            dx = wPg(1) - wPv(1);
-            dy = wPg(2) - wPv(2);
-            yaw_target = atan2(dy, dx);
-            R_target = [cos(yaw_target) -sin(yaw_target) 0; % Roll = Pitch = 0, Yaw = yaw_target
-                        sin(yaw_target) cos(yaw_target) 0;
-                        0 0 1];
-            wT_target = eye(4);
-            wT_target(1:3, 1:3) = R_target;
-            wT_target(1:3, 4) = wPv;
-            
-            [ang, ~] = CartError(wT_target, robotModel.wTv);
-            ang_err = norm(ang);
-
             if logging_disp == 0
-                fprintf("Distance to reachability: %.2f m\n", manip_err);
-                fprintf("Angular error to target: %.2f rad\n", ang_err);
+                fprintf("Distance to reachability: %.2f m\n", task_manipulability_check.err);
+                fprintf("Angular error to target: %.2f rad\n ", task_target_attitude.err);
             end
-            if (abs(manip_err) < manip_threshold)  && (abs(ang_err) < ang_threshold)
+            if (abs(task_manipulability_check.err) < manip_threshold)  && (abs(task_target_attitude.err) < ang_threshold)
                 currentState = "Landing";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Target in manipulation range. Start Landing \n', sim.time);

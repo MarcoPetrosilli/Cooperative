@@ -3,20 +3,22 @@ classdef TaskDexterity < Task
         id = "Dexterity Objective";
         mu_min;
         current_mu;
+        q_center = [];
     end
     
     methods
         function obj = TaskDexterity(mu_min)
             obj.mu_min = mu_min;
+            obj.q_center = (robot.jlmax + jlmin) / 2;
         end
         
         function updateReference(obj, robot)
-            J_a = obj.J(:, 1:7); 
+            J_a = RobustJacobian(robot.q);
             obj.current_mu = sqrt(det(J_a * J_a'));
             obj.err = obj.mu_min - obj.current_mu;
             
-            % LA JACOBIANA È IN ROBUST JACOBIAN
-
+            q_error = obj.q_center - robot.q;
+            % obj.xdotbar = 0.1 * 
             % Se siamo in zona critica, generiamo una velocità di allontanamento.
             % Poiché non sappiamo a priori "in che direzione" muoverci per 
             % aumentare la mu, usiamo una strategia di massimizzazione del gradiente
@@ -38,7 +40,7 @@ classdef TaskDexterity < Task
             delta = 1e-2;
             act = DecreasingBellShapedFunction(0, delta, 0, 1, obj.err);
             
-            obj.A = eye(3) * act;
+            obj.A = eye(2) * act;
         end
     end
 end

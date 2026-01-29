@@ -7,16 +7,23 @@ classdef TaskJointsPosition < Task
     methods
         function obj = TaskJointsPosition(q_home)
             obj.q_home = q_home;
+            obj.q_home = obj.q_home(:)
+            size(obj.q_home)
         end
         function updateReference(obj, robot)
-            obj.e = robot.q - obj.q_home;
+            obj.e = obj.q_home - robot.q;
             obj.xdotbar = -0.5 * obj.e;
+            size(obj.xdotbar)
         end
         function updateJacobian(obj, robot)
-            obj.J = [eye(7), zeros(7,6)]; 
+            bJe = RobustJacobian(robot.q);
+            Ste = [eye(3) zeros(3);  -skew(robot.vTe(1:3,1:3)*robot.eTt(1:3,4)) eye(3)];
+            Jt_a  = Ste * [robot.vTb(1:3,1:3) zeros(3,3); zeros(3,3) robot.vTb(1:3,1:3)] * bJe;
+            obj.J = [Jt_a , zeros(6)]; 
+            % obj.J = [eye(6) zeros(6,7)]; 
         end
         function updateActivation(obj, robot)
-            obj.A = eye(7);
+            obj.A = eye(6);
         end
     end
 end
