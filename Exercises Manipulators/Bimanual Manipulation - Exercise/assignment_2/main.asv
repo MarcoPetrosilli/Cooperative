@@ -21,7 +21,7 @@ function main()
     real_robot = false;
     
     %Activate / Deactivate constraint
-    CONSTRAINT_ON = false;
+    CONSTRAINT_ON = true;
     
     %Initiliaze panda_arm() Class, specifying the base offset w.r.t World Frame
     arm1=panda_arm(model,eye(4));
@@ -149,7 +149,6 @@ function main()
     xline(arm1.tf)
     hold off
     ylabel('Distance');
-    title('Distance');
 
     tg_pos = find(t == arm1.tg);
     % tf_pos = find(t == arm1.tf);
@@ -166,8 +165,8 @@ function main()
     plot(X_o2_1);
     hold off
     ylabel('X_ang');
-    legend('Xo_l', 'Xo_r');
-    title('X_ang');
+    legend('Xo1', 'Xo2');
+
     X_o1_2 = timeseries(X_o1_(2,:), t);
     X_o2_2 = timeseries(X_o2_(2,:), t);
     subplot(2,3,2);
@@ -175,9 +174,9 @@ function main()
     hold on;
     plot(X_o2_2);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Y_ang');
-    title('X_ang');
+    legend('Xo1', 'Xo2');
+    title('Y_ang');
+
     X_o1_3 = timeseries(X_o1_(3,:), t);
     X_o2_3 = timeseries(X_o2_(3,:), t);
     subplot(2,3,3);
@@ -185,8 +184,7 @@ function main()
     hold on;
     plot(X_o2_3);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Z_ang');
+    legend('Xo1', 'Xo2');
     title('Z_ang');
 
     X_o1_4 = timeseries(X_o1_(4,:), t);
@@ -196,9 +194,9 @@ function main()
     hold on;
     plot(X_o2_4);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('X_lin');
+    legend('Xo1', 'Xo2');
     title('X_lin');
+
     X_o1_5 = timeseries(X_o1_(5,:), t);
     X_o2_5 = timeseries(X_o2_(5,:), t);
     subplot(2,3,5);
@@ -206,9 +204,9 @@ function main()
     hold on;
     plot(X_o2_5);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Y_lin');
+    legend('Xo1', 'Xo2');
     title('Y_lin');
+
     X_o1_6 = timeseries(X_o1_(6,:), t);
     X_o2_6 = timeseries(X_o2_(6,:), t);
     subplot(2,3,6);
@@ -216,7 +214,6 @@ function main()
     hold on;
     plot(X_o2_6);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Z_lin');
+    legend('Xo1', 'Xo2');
     title('Z_lin');
 end
