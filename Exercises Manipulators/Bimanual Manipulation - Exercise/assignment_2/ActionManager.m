@@ -8,6 +8,7 @@ classdef ActionManager < handle
         lastAction = []       % previous action index
         actionSwitchTime = 0  % timer handle
         transitionDuration = 2.0 % [s] blending duration
+        activation_history = struct();
     end
 
     methods
@@ -30,6 +31,10 @@ classdef ActionManager < handle
         function addUnifiedAction(obj, unified_set)
             % Define the global set of all tasks
             obj.unified_action = unified_set;
+            for i = 1:length(unified_set)
+                t_name = unified_set{i}.task_name;
+                obj.activation_history.(t_name) = [];
+            end
         end
 
         function setCurrentAction(obj, actionName)
@@ -130,10 +135,10 @@ classdef ActionManager < handle
                 task.updateActivation(bm_system);
 
 
-                if inCurrent(i) && ~inPrev(i) && ~task.constrained
+                if inCurrent(i) && ~inPrev(i)
                     % entering → fade in
                     task.A = task.A * alpha_in;
-                elseif ~inCurrent(i) && inPrev(i) && ~task.constrained
+                elseif ~inCurrent(i) && inPrev(i)
                     % leaving → fade out
                     task.A = task.A * alpha_out;
                 elseif ~inCurrent(i) && ~inPrev(i)
@@ -141,6 +146,45 @@ classdef ActionManager < handle
                 % else
                     % steady → normal activation
                 end
+
+                current_act = diag(task.A)';
+                obj.activation_history.(task.task_name)(end+1, :) = current_act;
+            end
+        end
+
+        function plotActivations(obj, dt)
+            
+            task_names = fieldnames(obj.activation_history);
+            num_tasks = length(task_names);
+            
+            
+            figure('Name', 'Task Activations over Time', 'Color', 'w');
+            
+            
+            cols = ceil(sqrt(num_tasks));
+            rows = ceil(num_tasks / cols);
+            
+            for i = 1:num_tasks
+                name = task_names{i};
+                data = obj.activation_history.(name);
+                
+                
+                if isempty(data)
+                    continue; 
+                end
+                
+                
+                steps = size(data, 1);
+                time_vector = (0:steps-1) * dt;
+                
+                subplot(rows, cols, i);
+                plot(time_vector, data, 'LineWidth', 1.5);
+                
+                title(name, 'Interpreter', 'none', 'FontWeight', 'bold');
+                xlabel('Time [s]');
+                ylabel('Activation (A)');
+                ylim([-0.1, 1.1]); 
+                grid on;
             end
         end
 
