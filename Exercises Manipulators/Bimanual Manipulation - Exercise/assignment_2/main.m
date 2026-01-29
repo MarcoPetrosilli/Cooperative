@@ -1,3 +1,7 @@
+%Petrosilli Marco 7812048
+%Lovecchio Marco 7647356
+%Marmolino Giorgio 7721100
+
 function main()
     %Add path
     addpath('./simulation_scripts');
