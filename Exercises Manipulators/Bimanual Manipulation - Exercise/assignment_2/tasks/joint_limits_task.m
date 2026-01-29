@@ -12,24 +12,25 @@ classdef joint_limits_task < Task
             obj.task_name=taskID;
         end
 
-        function updateReference(obj, robot_system, StateMachine)
+        function updateReference(obj, robot_system,grasped)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
                 robot=robot_system.right_arm;    
             end
             
+            
             obj.xdotbar = zeros(7,1);
 
             
             for i = 1:7
-                dist_min = robot.q(i) - robot.jlmin(i);
-                dist_max = robot.jlmax(i) - robot.q(i);
+                dist_min = -obj.lambda * (robot.jlmin(i) - robot.q(i));
+                dist_max = obj.lambda * (robot.jlmax(i) - robot.q(i));
         
-                if dist_min < obj.threshold
-                    obj.xdotbar(i) = obj.lambda * (obj.threshold - dist_min);
-                elseif dist_max < obj.threshold
-                    obj.xdotbar(i) = -obj.lambda * (obj.threshold - dist_max);
+                if abs(dist_min) < obj.threshold
+                    obj.xdotbar(i) = dist_min;
+                elseif abs(dist_max) < obj.threshold
+                    obj.xdotbar(i) = dist_max;
                 end
             end
 

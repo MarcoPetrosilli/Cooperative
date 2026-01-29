@@ -27,7 +27,7 @@ classdef DualArmStateMachine < handle
             actionManager.setCurrentAction("go_to_grasp");
         end
         
-        function update(obj, arm1, arm2, actionManager)
+        function update(obj, arm1, arm2, actionManager, t)
             
             targetReached = obj.checkTargetReached(arm1, arm2);
 
@@ -45,6 +45,8 @@ classdef DualArmStateMachine < handle
 
                     if ~obj.transition
                         actionManager.setCurrentAction("move_grasped_obj");
+                        arm1.tg = t;
+                        arm2.tg = t;
                         obj.transition = true;
                     end
 
@@ -60,6 +62,8 @@ classdef DualArmStateMachine < handle
 
                     if obj.transition
                         actionManager.setCurrentAction("final");
+                        arm1.tf = t;
+                        arm2.tf = t;
                         obj.transition = false;
                     end
                      

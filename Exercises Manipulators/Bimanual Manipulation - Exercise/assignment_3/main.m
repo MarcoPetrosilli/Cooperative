@@ -57,8 +57,8 @@ function main()
     % --- Define Tasks ---
     left_tool_task = tool_task("L", "LT");
     right_tool_task = tool_task("R", "RT");
-    left_tool_task_2 = tool_task_2("L", "LT2");
-    right_tool_task_2 = tool_task_2("R", "RT2");
+    left_tool_task_2 = tool_task("L", "LT2");
+    right_tool_task_2 = tool_task("R", "RT2");
     left_min_altitude = ee_altitude_task("L", "LA", 0.3);
     right_min_altitude = ee_altitude_task("R", "RA", 0.15);
     left_joint_limits_task = joint_limits_task("L", "LL");
@@ -216,8 +216,6 @@ function main()
     plot(X_o1_2);
     hold on;
     plot(X_o2_2);
-    plot(xl_2);
-    plot(xr_2);
     plot(Xo_12_arm1_2);
     hold off
     legend('Xo1', 'Xo2', 'Xo12arm1');
