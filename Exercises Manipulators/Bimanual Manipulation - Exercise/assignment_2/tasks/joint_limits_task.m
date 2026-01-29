@@ -12,7 +12,7 @@ classdef joint_limits_task < Task
             obj.task_name=taskID;
         end
 
-        function updateReference(obj, robot_system,grasped)
+        function updateReference(obj, robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
@@ -38,7 +38,7 @@ classdef joint_limits_task < Task
 
         end
         
-        function updateJacobian(obj, robot_system, StateMachine)
+        function updateJacobian(obj, robot_system)
 
             if obj.ID=='L'
                 obj.J= [eye(7), zeros(7,7)];

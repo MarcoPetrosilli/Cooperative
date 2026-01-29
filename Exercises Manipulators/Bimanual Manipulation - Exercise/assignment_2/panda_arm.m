@@ -89,10 +89,6 @@ classdef panda_arm < handle
             obj.bTe=getTransform(obj.robot_model.franka,[obj.q',0,0],'panda_link7');
             obj.wTe=obj.wTb*obj.bTe;
             obj.wTt =obj.wTe*obj.eTt;
-            
-            % While I'm goint to grasp I update the tTo, dependent on where
-            % the tool is, after grasped I've to update wTo, since o is
-            % moving with the arm
 
             
         end

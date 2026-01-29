@@ -21,7 +21,7 @@ function main()
     real_robot = false;
     
     %Activate / Deactivate constraint
-    CONSTRAINT_ON = false;
+    CONSTRAINT_ON = true;
     
     %Initiliaze panda_arm() Class, specifying the base offset w.r.t World Frame
     arm1=panda_arm(model,eye(4));
@@ -138,7 +138,7 @@ function main()
     logger.plotAll(action,tasks);
 
     fprintf('Plotting Arm Activations...\n');
-    actionManager.plotActivations(dt);
+    actionManager.plotActivations(dt, arm1);
 
     t = 0:dt:end_time;
     d = timeseries(dist, t);
@@ -148,75 +148,85 @@ function main()
     xline(arm1.tg)
     xline(arm1.tf)
     hold off
-    ylabel('Distance');
+    ylabel('Distance (m)');
     title('Distance');
 
-    tg_pos = find(t == arm1.tg);
-    % tf_pos = find(t == arm1.tf);
-    t = t(tg_pos:end);
-    X_o1_ = X_o1(:, tg_pos:end);
-    X_o2_ = X_o2(:, tg_pos:end);
-
-    X_o1_1 = timeseries(X_o1_(1,:), t);
-    X_o2_1 = timeseries(X_o2_(1,:), t);
+    X_o1_1 = timeseries(X_o1(1,:), t);
+    X_o2_1 = timeseries(X_o2(1,:), t);
     figure;
     subplot(2,3,1);
     plot(X_o1_1);
     hold on;
     plot(X_o2_1);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    ylabel('X_ang');
+    ylabel('X_ang (rad/s)');
     legend('Xo_l', 'Xo_r');
     title('X_ang');
-    X_o1_2 = timeseries(X_o1_(2,:), t);
-    X_o2_2 = timeseries(X_o2_(2,:), t);
+
+    X_o1_2 = timeseries(X_o1(2,:), t);
+    X_o2_2 = timeseries(X_o2(2,:), t);
     subplot(2,3,2);
     plot(X_o1_2);
     hold on;
     plot(X_o2_2);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r');
-    ylabel('Y_ang');
-    title('X_ang');
-    X_o1_3 = timeseries(X_o1_(3,:), t);
-    X_o2_3 = timeseries(X_o2_(3,:), t);
+    ylabel('Y_ang (rad/s)');
+    title('Y_ang');
+
+    X_o1_3 = timeseries(X_o1(3,:), t);
+    X_o2_3 = timeseries(X_o2(3,:), t);
     subplot(2,3,3);
     plot(X_o1_3);
     hold on;
     plot(X_o2_3);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r');
-    ylabel('Z_ang');
+    ylabel('Z_ang (rad/s)');
     title('Z_ang');
 
-    X_o1_4 = timeseries(X_o1_(4,:), t);
-    X_o2_4 = timeseries(X_o2_(4,:), t);
+    X_o1_4 = timeseries(X_o1(4,:), t);
+    X_o2_4 = timeseries(X_o2(4,:), t);
     subplot(2,3,4);
     plot(X_o1_4);
     hold on;
     plot(X_o2_4);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r');
-    ylabel('X_lin');
+    ylabel('X_lin (m/s)');
     title('X_lin');
-    X_o1_5 = timeseries(X_o1_(5,:), t);
-    X_o2_5 = timeseries(X_o2_(5,:), t);
+
+    X_o1_5 = timeseries(X_o1(5,:), t);
+    X_o2_5 = timeseries(X_o2(5,:), t);
     subplot(2,3,5);
     plot(X_o1_5);
     hold on;
     plot(X_o2_5);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r');
-    ylabel('Y_lin');
+    ylabel('Y_lin (m/s)');
     title('Y_lin');
-    X_o1_6 = timeseries(X_o1_(6,:), t);
-    X_o2_6 = timeseries(X_o2_(6,:), t);
+
+    X_o1_6 = timeseries(X_o1(6,:), t);
+    X_o2_6 = timeseries(X_o2(6,:), t);
     subplot(2,3,6);
     plot(X_o1_6);
     hold on;
     plot(X_o2_6);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r');
-    ylabel('Z_lin');
+    ylabel('Z_lin (m/s)');
     title('Z_lin');
 end

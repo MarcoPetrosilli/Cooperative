@@ -1,5 +1,5 @@
 classdef tool_task < Task   
-    %Tool position control for a single arm
+    
     properties
         constrained = false
     end
@@ -32,7 +32,7 @@ classdef tool_task < Task
     
     
             obj.xdotbar = 1.0 * [v_ang; v_lin];
-            % limit the requested velocities...
+
             obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.3);
             obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end

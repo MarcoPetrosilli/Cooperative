@@ -2,7 +2,6 @@ classdef ActionManager < handle
     properties
         actions = {}
         currentAction = 1
-        mu_0 = 0
         action_names = []
         unified_action = {}
         lastAction = []
@@ -37,14 +36,14 @@ classdef ActionManager < handle
             obj.actionSwitchTime = tic;
         end
         
-        function [ydotbar] = computeICAT(obj, bm_system, actual_arm, other_arm, actual_StateMachine, other_StateMachine)
+        function [ydotbar] = computeICAT(obj, bm_system, actual_arm, actual_StateMachine)
             tasks = obj.unified_action;
             tasks_id = cell(1, length(tasks));
             for i = 1:length(tasks)
                 tasks_id{i} = tasks{i}.task_name;
             end
             
-            % Calcolo Alpha (Blending)
+
             if obj.actionSwitchTime ~= 0
                 t = toc(obj.actionSwitchTime);
                 duration = obj.transitionDuration;
@@ -78,12 +77,12 @@ classdef ActionManager < handle
                 task.updateJacobian(bm_system);
                 task.updateActivation(bm_system);
                 
-                % Applicazione del Blending
-                if inCurrent(i) && ~inPrev(i)
+               
+                if inCurrent(i) && ~inPrev(i) && ~task.constrained
                     task.A = task.A * alpha_in;
-                elseif ~inCurrent(i) && inPrev(i)
+                elseif ~inCurrent(i) && inPrev(i) && ~task.constrained
                     task.A = task.A * alpha_out;
-                elseif ~inCurrent(i) && ~inPrev(i)
+                elseif ~inCurrent(i) && ~inPrev(i) || task.constrained
                     task.A = task.A * 0;
                 end
                 
@@ -91,14 +90,13 @@ classdef ActionManager < handle
                 obj.activation_history.(task.task_name)(end+1, :) = current_act;
             end
             
-            % ... (Resto della logica per bim_task_ID e ICAT invariata) ...
+  
             if actual_arm.robot_ID == "L"
-                bim_task_ID = find(cellfun(@(x) x.task_name == "LB", tasks), 1);        
+                bim_task_ID = find(cellfun(@(x) x.task_name == "LC", tasks), 1);        
             elseif actual_arm.robot_ID == "R"
-                bim_task_ID = find(cellfun(@(x) x.task_name == "RB", tasks), 1);
+                bim_task_ID = find(cellfun(@(x) x.task_name == "RC", tasks), 1);
             end
             
-             % FIX: usa l'elemento specifico
             ydotbar = obj.perform_ICAT(tasks);
             actual_arm.X_o = actual_arm.wJo*ydotbar;
             
@@ -115,8 +113,6 @@ classdef ActionManager < handle
          
         end
         
-        % ... (Altri metodi come coordinate_velocities, perform_ICAT rimangono uguali) ...
-        
 
         function ydotbar = perform_ICAT(obj, tasks)
             ydotbar = zeros(7,1);
@@ -130,38 +126,44 @@ classdef ActionManager < handle
         end
 
        
-        function plotActivations(obj, dt)
-            
+        function plotActivations(obj, dt, arm)
+
             task_names = fieldnames(obj.activation_history);
+        
+            task_names = setdiff(task_names, {'LC','RC'}, 'stable');
+        
             num_tasks = length(task_names);
-            
-            
+        
+            if num_tasks == 0
+                warning('No task activations to plot (LC and RC excluded).');
+                return;
+            end
+        
             figure('Name', 'Task Activations over Time', 'Color', 'w');
-            
-            
+        
             cols = ceil(sqrt(num_tasks));
             rows = ceil(num_tasks / cols);
-            
+        
             for i = 1:num_tasks
                 name = task_names{i};
                 data = obj.activation_history.(name);
-                
-                
+        
                 if isempty(data)
-                    continue; 
+                    continue;
                 end
-                
-                
+        
                 steps = size(data, 1);
                 time_vector = (0:steps-1) * dt;
-                
+        
                 subplot(rows, cols, i);
                 plot(time_vector, data, 'LineWidth', 1.5);
-                
+                xline(arm.tg)
+                xline(arm.tf)
+        
                 title(name, 'Interpreter', 'none', 'FontWeight', 'bold');
                 xlabel('Time [s]');
                 ylabel('Activation (A)');
-                ylim([-0.1, 1.1]); 
+                ylim([-0.1, 1.1]);
                 grid on;
             end
         end

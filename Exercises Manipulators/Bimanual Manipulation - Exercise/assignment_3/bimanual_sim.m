@@ -42,7 +42,6 @@ classdef bimanual_sim < handle
             obj.left_arm.update_transform()
             obj.right_arm.update_transform()
 
-            % 2. GESTIONE SINCRONIZZATA DELL'OGGETTO
         if l_StateMachine.isGrasped() && r_StateMachine.isGrasped()
             
             new_wTo = obj.left_arm.wTt * obj.left_arm.tTo;

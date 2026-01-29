@@ -16,7 +16,6 @@ function main()
     X_o1 = [];
     X_o2 = [];
     Xo_12_arm1 = [];
-    Xo_12_arm2 = [];
 
     % Initialize Franka Emika Panda Model
     model = load("panda.mat");
@@ -35,21 +34,18 @@ function main()
     bm_sim = bimanual_sim(dt, arm1, arm2, end_time);
 
     % --- Define Object ---
-    obj_length = 0.6;
+    obj_length = 0.06;
     w_obj_pos = [0.5 0 0.59]';
     w_obj_ori = rotation(0, 0, 0);
 
-    % Set goal frames based on object frame
-    % arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [0 0 -0.05]', rotation(pi, -deg2rad(20), 0));
-    % arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.05 0 +0.05]', rotation(0, pi+deg2rad(20), 0));
-    
-    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [-0.05 0 0]', rotation(pi, -deg2rad(20), 0));
-    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos + [+0.05 0 0]', rotation(0, pi+deg2rad(20), 0));
+    grasp_offset = [(obj_length/2)-0.005 0 0]';
 
-    % Define Object goal frame (Cooperative Motion)
-    % wTog = [rotation(0, +pi/4, 0) [0.65, -0.35, 0.3]'; 0 0 0 1];
+    %Set goal frames for left and right arm, based on object frame
 
-    wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.3]'; 0 0 0 1];
+    arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos-grasp_offset,rotation(pi, -deg2rad(20), 0));
+    arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+grasp_offset,rotation(0, pi+deg2rad(20), 0));
+
+    wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.48]'; 0 0 0 1];
  
     arm1.set_obj_goal(wTog);
     arm2.set_obj_goal(wTog);
@@ -59,24 +55,24 @@ function main()
     right_tool_task = tool_task("R", "RT");
     left_tool_task_2 = tool_task("L", "LT2");
     right_tool_task_2 = tool_task("R", "RT2");
-    left_min_altitude = ee_altitude_task("L", "LA", 0.3);
+    left_min_altitude = ee_altitude_task("L", "LA", 0.15);
     right_min_altitude = ee_altitude_task("R", "RA", 0.15);
     left_joint_limits_task = joint_limits_task("L", "LL");
     right_joint_limits_task = joint_limits_task("R", "RL");
-    left_bim_constraint_task = bim_rigid_const_task("L", "LB");
-    right_bim_constraint_task = bim_rigid_const_task("R", "RB");
+    left_coop_constraint_task = coop_rigid_const_task("L", "LC");
+    right_coop_constraint_task = coop_rigid_const_task("R", "RC");
 
     % --- Define Action Sets (LEFT) ---
     l_go_to_grasp_set = {left_joint_limits_task, left_min_altitude, left_tool_task};
-    l_move_grasped_obj_set = {left_joint_limits_task, left_min_altitude, left_tool_task_2};
+    l_move_grasped_obj_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task_2};
     l_final_set = {left_min_altitude};
-    l_unified_set = {left_bim_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
+    l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
 
     % --- Define Action Sets (RIGHT) ---
     r_go_to_grasp_set = {right_joint_limits_task, right_min_altitude, right_tool_task};
-    r_move_grasped_obj_set = {right_joint_limits_task, right_min_altitude, right_tool_task_2};
+    r_move_grasped_obj_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task_2};
     r_final_set = {right_min_altitude};
-    r_unified_set = {right_bim_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
+    r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
 
     % --- Initialize LEFT Action Manager ---
     l_actionManager = ActionManager();
@@ -119,8 +115,8 @@ function main()
         bm_sim.update_full_kinematics(l_StateMachine, r_StateMachine);
         
         % 3. Compute Control Commands
-        [q_dot_l] = l_actionManager.computeICAT(bm_sim, arm1, arm2, l_StateMachine, r_StateMachine);
-        [q_dot_r] = r_actionManager.computeICAT(bm_sim, arm2, arm1, r_StateMachine, l_StateMachine);
+        [q_dot_l] = l_actionManager.computeICAT(bm_sim, arm1, l_StateMachine);
+        [q_dot_r] = r_actionManager.computeICAT(bm_sim, arm2, r_StateMachine);
         
         if l_StateMachine.isGrasped() || r_StateMachine.isGrasped() 
                coordinate_velocities(arm1, arm2);
@@ -158,42 +154,33 @@ function main()
         X_o1 = [X_o1 arm1.X_o];
         X_o2 = [X_o2 arm2.X_o];
         Xo_12_arm1 = [Xo_12_arm1 arm1.Xo_12];
-        Xo_12_arm2 = [Xo_12_arm2 arm2.Xo_12];
     end
 
     fprintf('Plotting Left Arm Activations...\n');
-    l_actionManager.plotActivations(dt);
+    l_actionManager.plotActivations(dt, arm1);
     
     % Plot delle attivazioni per il braccio destro
     fprintf('Plotting Right Arm Activations...\n');
-    r_actionManager.plotActivations(dt);
+    r_actionManager.plotActivations(dt, arm2);
 
-    % % Plotting
-    % action = 1;
-    % tasks = [1];
-    % logger.plotAll(action, tasks);
-    % 
+    % Plotting
+    action = 1;
+    tasks = [1];
+    logger.plotAll(action, tasks);
+    
     t = 0:dt:end_time;
     d = timeseries(dist, t);
     figure;
     plot(d);
     hold on
     xline(arm1.tg)
-    % xline(arm1.tf)
+    xline(arm1.tf)
     hold off
+    ylabel('Distance (m)');
+    title('Distance');
 
-    tg_pos = find(t == arm1.tg);
-    % tf_pos = find(t == arm1.tf);
-    t = t(tg_pos:end);
-    X_o1_ = X_o1(:, tg_pos:end);
-    X_o2_ = X_o2(:, tg_pos:end);
-    xl = xl(:, tg_pos:end);
-    xr = xr(:, tg_pos:end);
-    Xo_12_arm1 = Xo_12_arm1(:, tg_pos:end);
-    Xo_12_arm2 = Xo_12_arm2(:, tg_pos:end);
-
-    X_o1_1 = timeseries(X_o1_(1,:), t);
-    X_o2_1 = timeseries(X_o2_(1,:), t);
+    X_o1_1 = timeseries(X_o1(1,:), t);
+    X_o2_1 = timeseries(X_o2(1,:), t);
     xl_1 = timeseries(xl(1,:), t);
     xr_1 = timeseries(xr(1,:), t);
     Xo_12_arm1_1 = timeseries(Xo_12_arm1(1,:), t);
@@ -203,12 +190,15 @@ function main()
     hold on;
     plot(X_o2_1);
     plot(Xo_12_arm1_1);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('X_ang');
+    ylabel('X_ang (rad/s)');
 
-    X_o1_2 = timeseries(X_o1_(2,:), t);
-    X_o2_2 = timeseries(X_o2_(2,:), t);
+    X_o1_2 = timeseries(X_o1(2,:), t);
+    X_o2_2 = timeseries(X_o2(2,:), t);
     xl_2 = timeseries(xl(2,:), t);
     xr_2 = timeseries(xr(2,:), t);
     Xo_12_arm1_2 = timeseries(Xo_12_arm1(2,:), t);
@@ -217,12 +207,15 @@ function main()
     hold on;
     plot(X_o2_2);
     plot(Xo_12_arm1_2);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('Y_ang');
+    ylabel('Y_ang (rad/s)');
 
-    X_o1_3 = timeseries(X_o1_(3,:), t);
-    X_o2_3 = timeseries(X_o2_(3,:), t);
+    X_o1_3 = timeseries(X_o1(3,:), t);
+    X_o2_3 = timeseries(X_o2(3,:), t);
     xl_3 = timeseries(xl(3,:), t);
     xr_3 = timeseries(xr(3,:), t);
     Xo_12_arm1_3 = timeseries(Xo_12_arm1(3,:), t);
@@ -231,12 +224,15 @@ function main()
     hold on;
     plot(X_o2_3);
     plot(Xo_12_arm1_3);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('Z_ang');
+    ylabel('Z_ang (rad/s)');
 
-    X_o1_4 = timeseries(X_o1_(4,:), t);
-    X_o2_4 = timeseries(X_o2_(4,:), t);
+    X_o1_4 = timeseries(X_o1(4,:), t);
+    X_o2_4 = timeseries(X_o2(4,:), t);
     xl_4 = timeseries(xl(4,:), t);
     xr_4 = timeseries(xr(4,:), t);
     Xo_12_arm1_4 = timeseries(Xo_12_arm1(4,:), t);
@@ -245,12 +241,15 @@ function main()
     hold on;
     plot(X_o2_4);
     plot(Xo_12_arm1_4);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('X_lin');
+    ylabel('X_lin (m/s)');
 
-    X_o1_5 = timeseries(X_o1_(5,:), t);
-    X_o2_5 = timeseries(X_o2_(5,:), t);
+    X_o1_5 = timeseries(X_o1(5,:), t);
+    X_o2_5 = timeseries(X_o2(5,:), t);
     xl_5 = timeseries(xl(5,:), t);
     xr_5 = timeseries(xr(5,:), t);
     Xo_12_arm1_5 = timeseries(Xo_12_arm1(5,:), t);
@@ -259,24 +258,29 @@ function main()
     hold on;
     plot(X_o2_5);
     plot(Xo_12_arm1_5);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('Y_lin');
+    ylabel('Y_lin (m/s)');
 
-    X_o1_6 = timeseries(X_o1_(6,:), t);
-    X_o2_6 = timeseries(X_o2_(6,:), t);
+    X_o1_6 = timeseries(X_o1(6,:), t);
+    X_o2_6 = timeseries(X_o2(6,:), t);
     xl_6 = timeseries(xl(6,:), t);
     xr_6 = timeseries(xr(6,:), t);
     Xo_12_arm1_6 = timeseries(Xo_12_arm1(6,:), t);
-    Xo_12_arm2_6 = timeseries(Xo_12_arm2(6,:), t);
     subplot(2,3,6);
     plot(X_o1_6);
     hold on;
     plot(X_o2_6);
     plot(Xo_12_arm1_6);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo1', 'Xo2', 'Xo12arm1');
+    legend('Xo_l', 'Xo_r', 'Xo12');
     title('Z_lin');
+    ylabel('Z_lin (m/s)');
 
     figure;
     subplot(2,3,1);
@@ -284,55 +288,72 @@ function main()
     hold on;
     plot(xl_1);
     plot(xr_1);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr');
+    legend('Xo12', 'xl', 'xr');
     title('X_ang');
+    ylabel('X_ang (rad/s)');
 
     subplot(2,3,2);
     plot(Xo_12_arm1_2);
     hold on;
     plot(xl_2);
     plot(xr_2);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr');
+    legend('Xo12', 'xl', 'xr');
     title('Y_ang');
+    ylabel('Y_ang (rad/s)');
 
     subplot(2,3,3);
     plot(Xo_12_arm1_3);
     hold on;
     plot(xl_3);
     plot(xr_3);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr');
+    legend('Xo12', 'xl', 'xr');
     title('Z_ang');
+    ylabel('Z_ang (rad/s)');
 
     subplot(2,3,4);
     plot(Xo_12_arm1_4);
     hold on;
     plot(xl_4);
     plot(xr_4);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr');
+    legend('Xo12', 'xl', 'xr');
     title('X_lin');
+    ylabel('X_lin (m/s)');
 
     subplot(2,3,5);
     plot(Xo_12_arm1_5);
     hold on;
     plot(xl_5);
     plot(xr_5);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr');
+    legend('Xo12', 'xl', 'xr');
     title('Y_lin');
+    ylabel('Y_lin (m/s)');
 
     subplot(2,3,6);
     plot(Xo_12_arm1_6);
     hold on;
     plot(xl_6);
     plot(xr_6);
-    plot(Xo_12_arm2_6);
+    xline(arm1.tg)
+    xline(arm1.tf)
     hold off
-    legend('Xo12arm1', 'xl', 'xr', 'Xo12arm2');
+    legend('Xo12', 'xl', 'xr');
     title('Z_lin');
+    ylabel('Z_lin (m/s)');
 end
 
 
@@ -356,4 +377,4 @@ function coordinate_velocities(left_arm, right_arm)
         Xo_12 = H_12*(eye(12)-pinv(C)*C)*Xdot_t;
         left_arm.Xo_12 = Xo_12(1:6);
         right_arm.Xo_12 = Xo_12(7:12);
-        end
+end

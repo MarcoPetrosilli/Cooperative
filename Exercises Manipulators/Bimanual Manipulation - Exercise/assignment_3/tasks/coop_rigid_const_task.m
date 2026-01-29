@@ -1,11 +1,11 @@
-classdef bim_rigid_const_task < Task   
-    %Tool position control for a single arm
+classdef coop_rigid_const_task < Task   
+
     properties
         constrained = true
     end
 
     methods
-        function obj=bim_rigid_const_task(robot_ID,taskID)
+        function obj=coop_rigid_const_task(robot_ID,taskID)
             obj.ID=robot_ID;
             obj.task_name=taskID;
 

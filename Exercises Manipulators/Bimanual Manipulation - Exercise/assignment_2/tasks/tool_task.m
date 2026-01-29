@@ -38,7 +38,7 @@ classdef tool_task < Task
             obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end
 
-        function updateJacobian(obj,robot_system, StateMachine)
+        function updateJacobian(obj,robot_system)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')

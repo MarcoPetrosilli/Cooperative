@@ -58,7 +58,6 @@ classdef DualArmStateMachine < handle
                     end
                     
                 case obj.STATE_FINAL
-                    % Task finished
 
                     if obj.transition
                         actionManager.setCurrentAction("final");
@@ -71,6 +70,8 @@ classdef DualArmStateMachine < handle
         end
         
         function isReached = checkTargetReached(obj, arm1, arm2)
+
+            
             dist1 = norm(arm1.dist_to_goal) < obj.Tolerance;
             dist2 = norm(arm2.dist_to_goal) < obj.Tolerance;
             rot1  = norm(arm1.rot_to_goal)  < obj.Tolerance;

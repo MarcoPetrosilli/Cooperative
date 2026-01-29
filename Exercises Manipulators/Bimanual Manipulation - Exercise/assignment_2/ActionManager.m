@@ -39,15 +39,13 @@ classdef ActionManager < handle
 
         function setCurrentAction(obj, actionName)
             % Switch to another action by name
-            % idx = find(strcmp(obj.action_names{:}, "safe_navigation"), 1);
-            % idx = find(strcmp(obj.action_names, actionName), 1);
             idx = find(string(obj.action_names) == actionName, 1);
             if isempty(idx)
                 error('Action "%s" not found.', actionName);
             end
             obj.lastAction = obj.currentAction;
             obj.currentAction = idx;
-            obj.actionSwitchTime = tic; % start blending timer
+            obj.actionSwitchTime = tic;
         end
 
         function [ydotbar] = computeICAT(obj, bm_system, StateMachine)
@@ -64,13 +62,10 @@ classdef ActionManager < handle
                 t = toc(obj.actionSwitchTime);
                 duration = obj.transitionDuration;
                 
-                % Chi entra deve andare da 0 a 1 (Increasing)
                 alpha_in = IncreasingBellShapedFunction(0, duration, 0, 1, t);
                 
-                % Chi esce deve andare da 1 a 0 (Decreasing)
                 alpha_out = DecreasingBellShapedFunction(0, duration, 0, 1, t);
             else
-                % Steady state (nessuna transizione in corso)
                 alpha_in = 1;
                 alpha_out = 0;
             end
@@ -131,20 +126,24 @@ classdef ActionManager < handle
                 task = tasks{i};
 
                 task.updateReference(bm_system, StateMachine);
-                task.updateJacobian(bm_system, StateMachine);
+                task.updateJacobian(bm_system);
                 task.updateActivation(bm_system);
 
+                if ~task.constrained
+                    if inCurrent(i) && ~inPrev(i) 
+                        task.A = task.A * alpha_in;
+                    elseif ~inCurrent(i) && inPrev(i)
+                        task.A = task.A * alpha_out;
+                    elseif ~inCurrent(i) && ~inPrev(i)
+                        task.A = task.A * 0;
+                    end
 
-                if inCurrent(i) && ~inPrev(i)
-                    % entering → fade in
-                    task.A = task.A * alpha_in;
-                elseif ~inCurrent(i) && inPrev(i)
-                    % leaving → fade out
-                    task.A = task.A * alpha_out;
-                elseif ~inCurrent(i) && ~inPrev(i)
-                    task.A = task.A * 0;
-                % else
-                    % steady → normal activation
+                else
+                    if inCurrent(i) && ~inPrev(i) 
+                        task.A = task.A;
+                    else
+                        task.A = task.A * 0;
+                    end
                 end
 
                 current_act = diag(task.A)';
@@ -152,7 +151,7 @@ classdef ActionManager < handle
             end
         end
 
-        function plotActivations(obj, dt)
+        function plotActivations(obj, dt, arm)
             
             task_names = fieldnames(obj.activation_history);
             num_tasks = length(task_names);
@@ -179,6 +178,8 @@ classdef ActionManager < handle
                 
                 subplot(rows, cols, i);
                 plot(time_vector, data, 'LineWidth', 1.5);
+                xline(arm.tg)
+                xline(arm.tf)
                 
                 title(name, 'Interpreter', 'none', 'FontWeight', 'bold');
                 xlabel('Time [s]');

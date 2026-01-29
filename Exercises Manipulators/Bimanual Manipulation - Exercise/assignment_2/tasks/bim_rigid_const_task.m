@@ -1,5 +1,5 @@
 classdef bim_rigid_const_task < Task   
-    %Tool position control for a single arm
+
     properties
         constrained = true;
     end
@@ -16,7 +16,7 @@ classdef bim_rigid_const_task < Task
     end
 
 
-        function updateJacobian(obj, robot_system, StateMachine)
+        function updateJacobian(obj, robot_system)
             
             robot_left=robot_system.left_arm;
             robot_right=robot_system.right_arm;
