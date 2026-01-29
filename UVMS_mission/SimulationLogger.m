@@ -65,34 +65,34 @@ classdef SimulationLogger < handle
             legend('xdot','ydot','zdot','omega_x','omega_y','omega_z');
 
             % Optional: plot task activations
-            figure(3);
+            % figure(3);
             n_cols = 3;
             n = ceilDiv(size(obj.a,3),n_cols);
             for i = 1:size(obj.a,3)
-                subplot(n ,n_cols,i);
-                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                figure(i+2)
+                % subplot(n ,n_cols,i);
+                set(gca, 'ColorOrder', [0 0 0], 'NextPlot', 'replacechildren');
+                plot(obj.t, squeeze(obj.a(:, :, i))','k', 'LineWidth', 1);
                 ylim([0,1]);
                 grid on;
                 title(['Task', num2str(i), obj.task_set{i}.id]);
             end
 
-            for i = 1:size(obj.a,3)
-                ax = subplot(n, n_cols, i);
-                
-                plot(ax, obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-                ylim(ax, [0, 1]);
-                grid(ax, 'on');
-                
-                task_id = obj.task_set{i}.id;
-                title(ax, ['Task ', num2str(i), ' ', task_id]);
-            
-                % Nome file: Task_<numero>_<id>.eps
-                filename = sprintf('Task_%02d_%s.png', i, task_id);
-            
-                % Salvataggio in formato EPS vettoriale
-                exportgraphics(ax, filename, 'ContentType', 'vector');
-            end
-
+            % for i = 1:size(obj.a,3)
+            %     ax = subplot(n, n_cols, i);
+            % 
+            %     plot(ax, obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     ylim(ax, [0, 1]);
+            %     grid(ax, 'on');
+            % 
+            %     task_id = obj.task_set{i}.id;
+            %     title(ax, ['Task ', num2str(i), ' ', task_id]);
+            % 
+            %     filename = sprintf('Task_%02d_%s.png', i, task_id);
+            % 
+            %     % Salvataggio corretto in PNG
+            %     exportgraphics(ax, filename, 'Resolution', 300);
+            % end
            
         end 
     end

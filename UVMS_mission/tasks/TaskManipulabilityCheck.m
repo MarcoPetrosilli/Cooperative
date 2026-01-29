@@ -52,7 +52,7 @@ classdef TaskManipulabilityCheck < Task
             % target, so we perform moltiplication with a second activation
             % value related to the angular error
             act_ang_err = DecreasingBellShapedFunction(th_ang, th_ang + delta_ang, 0, 1, ang_err);
-            act_manip_err = IncreasingBellShapedFunction(th_manip, th_manip + delta_manip, 0, 1, abs(obj.err));
+            act_manip_err = IncreasingBellShapedFunction(th_manip, th_manip + delta_manip , 0, 1, obj.err);
             obj.A = eye(2) * (act_manip_err * act_ang_err);
             
         end 
