@@ -37,7 +37,9 @@ classdef TaskLookAhead < Task
             obj.J = [zeros(3,7) zeros(3,3) robot.wTv(1:3,1:3)];
         end
         function updateActivation(obj, robot)
-            obj.A = eye(3);
+            [~, lin] = CartError(robot.wTgv , robot.wTv);
+            distToTarget = norm(lin(1:2));
+            obj.A = eye(3) * IncreasingBellShapedFunction(1.0, 4.0, 0, 1, distToTarget);
         end
     end
 end
