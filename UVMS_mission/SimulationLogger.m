@@ -76,20 +76,24 @@ classdef SimulationLogger < handle
                 title(['Task', num2str(i), obj.task_set{i}.id]);
             end
 
+            for i = 1:size(obj.a,3)
+                ax = subplot(n, n_cols, i);
+                
+                plot(ax, obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                ylim(ax, [0, 1]);
+                grid(ax, 'on');
+                
+                task_id = obj.task_set{i}.id;
+                title(ax, ['Task ', num2str(i), ' ', task_id]);
+            
+                % Nome file: Task_<numero>_<id>.eps
+                filename = sprintf('Task_%02d_%s.png', i, task_id);
+            
+                % Salvataggio in formato EPS vettoriale
+                exportgraphics(ax, filename, 'ContentType', 'vector');
+            end
 
-            % % Inseriti da me
-            % figure(3)
-            % for i = 1:5
-            %     subplot(5,1,i);
-            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-            %     title(['Task', num2str(i), obj.task_set{i}.id]);
-            % end
-            % figure(4)
-            % for i = 6:11
-            %     subplot(6,1,i-5);
-            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-            %     title(['Task', num2str(i), obj.task_set{i}.id]);
-            % end
+           
         end 
     end
 end
