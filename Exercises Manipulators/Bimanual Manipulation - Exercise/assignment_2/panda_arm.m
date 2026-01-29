@@ -31,7 +31,8 @@ classdef panda_arm < handle
         rot_to_goal
         %% Non Cooperative / Cooperative velocities
         X_o
-        Xo_12
+        tf
+        tg
     end
 
     methods

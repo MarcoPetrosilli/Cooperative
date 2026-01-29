@@ -279,6 +279,14 @@ classdef ActionManager < handle
             
             tasks{bim_task_ID}.A = eye(6);
 
+
+            if actual_arm.robot_ID == "L"
+                tool_task_ID = find(cellfun(@(x) x.task_name == "LT2", tasks), 1);        
+            elseif actual_arm.robot_ID == "R"
+                tool_task_ID = find(cellfun(@(x) x.task_name == "RT2", tasks), 1);
+            end
+         
+            tasks{tool_task_ID}.A = zeros(6);
          
         end
         
