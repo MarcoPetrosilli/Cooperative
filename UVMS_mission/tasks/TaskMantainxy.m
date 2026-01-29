@@ -1,13 +1,15 @@
 classdef TaskMantainxy < Task   
     properties
         id = "Mantain XY";
+        err
     end
 
 
     methods
+        
         function updateReference(obj, robot)
-            [~, lin] = CartError(robot.wTgv , robot.wTv);
-            obj.xdotbar = 0.2 * lin(1:2);
+            [~ , obj.err] = CartError(robot.stablePos, robot.wTv);
+            obj.xdotbar = 0.8 * obj.err(1:2);
             obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
         end
         function updateJacobian(obj, robot)

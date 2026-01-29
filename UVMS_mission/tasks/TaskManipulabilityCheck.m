@@ -1,101 +1,33 @@
-% classdef TaskManipulabilityCheck < Task
-%     properties
-%         id = "Manipulability";
-%         arm_length;
-%         armBase_distance;
-%         correction_step;
-%         err;
-%         lin;
-%     end
-% 
-%     methods
-%         function obj = TaskManipulabilityCheck(arm_reaach, armBase_vehicle_dist, correction_step)
-%             obj.arm_length = arm_reaach;
-%             obj.armBase_distance = armBase_vehicle_dist;
-%             obj.correction_step = correction_step;
-%             obj.xdotbar = zeros(2,1);  % Inizializzato come 2x1
-%         end
-% 
-%         function updateReference(obj, robot)
-%             w_Tool_goal_XY = robot.goalPosition(1:2); % nodule
-%             w_Vehicle_goal_XY = robot.vehicleGoalPosition(1:2);
-%             dist_goal_nodule = norm(w_Vehicle_goal_XY - w_Tool_goal_XY);
-% 
-%             % Calcolo della direzione (sempre colonna 2x1)
-%             obj.lin = (w_Tool_goal_XY - w_Vehicle_goal_XY);
-%             obj.lin = obj.lin(:);  % Assicura che sia colonna
-% 
-%             obj.err = dist_goal_nodule - (obj.arm_length + obj.armBase_distance);
-%             disp(size(obj.xdotbar))
-% 
-%             if obj.err > 0 % If original goal is too far:
-%                 fprintf("Manip adjust\n")
-%                 obj.xdotbar = 0.8 * obj.lin;
-%                 obj.xdotbar = Saturate(obj.xdotbar, 0.3);  % Saturate già restituisce 2x1
-%             else
-%                 obj.xdotbar = [0.1; 0.1];  % Valori di init come vettore colonna
-%             end
-% 
-%             % DEBUG
-%             fprintf('Size xdotbar: %d x %d\n', size(obj.xdotbar));
-%             fprintf('Value xdotbar: [%.3f, %.3f]\n', obj.xdotbar(1), obj.xdotbar(2));
-%             fprintf('Size w_Tool_goal_XY: %d x %d\n', size(w_Tool_goal_XY));
-%             fprintf('Size w_Vehicle_goal_XY: %d x %d\n', size(w_Vehicle_goal_XY));
-%         end
-% 
-%         function updateJacobian(obj, robot)
-%             obj.J = [zeros(2,7) robot.wTv(1:2,1:3) zeros(2,3)];
-%         end
-% 
-%         function updateActivation(obj, robot)
-%             th = 0;
-%             delta = 0.5;
-%             obj.A = eye(2) .* IncreasingBellShapedFunction(th-delta, th, 0, 1, obj.err);
-% 
-%             % DEBUG
-%             fprintf('Size A: %d x %d\n', size(obj.A));
-%         end
-%     end
-% end
-
 classdef TaskManipulabilityCheck < Task   
     properties
         id = "Manipulability";
         arm_length;
         armBase_distance;
-        manip_threshold;
         err;
         lin;
-        yaw
+        yaw;
     end
 
     methods
-        function obj = TaskManipulabilityCheck(arm_reaach, armBase_vehicle_dist, manip_threshold)
+        function obj = TaskManipulabilityCheck(arm_reaach, armBase_vehicle_dist)
             obj.arm_length = arm_reaach;
             obj.armBase_distance = armBase_vehicle_dist;
-            obj.manip_threshold = manip_threshold;
             obj.xdotbar = zeros(2,1);
         end
         function updateReference(obj, robot)
-            w_Tool_goal_XY = robot.goalPosition(1:2); % nodule
-            w_Vehicle_XY = robot.wTv(1:2,4);
-            dist_to_nodule = norm(w_Vehicle_XY - w_Tool_goal_XY);
-            
+            obj.err = inf; % init value
+            obj.yaw = 0.0; % init value
+           
+            [~ , lin_err] = CartError(robot.wTg, robot.wTv);
+
+            obj.yaw = atan2(lin_err(2),lin_err(1));
+
+            dist_to_nodule = norm(lin_err(1:2));
             obj.err = dist_to_nodule - (obj.arm_length + obj.armBase_distance);
-
-
-            if obj.err > obj.manip_threshold % If original goal is too far:
-                obj.lin = w_Tool_goal_XY - w_Vehicle_XY;
-                obj.lin = obj.lin(:);  % column vector
-
-                % compute yaw so it moves in direction of target (not
-                % forward of vehicle
-                obj.yaw = atan2(obj.lin(2), obj.lin(1)); % Calculate yaw angle
-                R_yaw = [cos(obj.yaw) -sin(obj.yaw); sin(obj.yaw) cos(obj.yaw)];
-
-                obj.xdotbar = 0.8 * R_yaw * obj.lin;
-                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
-            end
+            obj.xdotbar = 15 * lin_err(1:2);
+            obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
+            
+        
 
         end
         function updateJacobian(obj, robot)
@@ -103,11 +35,26 @@ classdef TaskManipulabilityCheck < Task
         end
 
         function updateActivation(obj, robot)
-            th = 0;
-            delta = 0.5;
-            % act_yaw_err = DecreasingBellShapedFunction(th, th+delta, 0, 1, obj.yaw);
-            act_manip_err = IncreasingBellShapedFunction(th-delta, th, 0, 1, obj.err);
-            obj.A = eye(2) * act_manip_err %* act_yaw_err;
-        end
+            wPg = robot.wTg(1:3,4);
+            R_target = [cos(obj.yaw) -sin(obj.yaw) 0;
+                        sin(obj.yaw) cos(obj.yaw) 0;
+                        0 0 1];
+            wT_target = eye(4);
+            wT_target(1:3, 1:3) = R_target;
+            wT_target(1:3, 4) = wPg;
+            [ang, ~] = CartError(wT_target, robot.wTv);
+            ang_err = norm(ang);
+            th_ang = 0;
+            th_manip = 0;
+            delta_ang = 3*pi/5; 
+            delta_manip = 1.0; % 0.1
+            % We prefer the robot moving when it is aligned with the
+            % target, so we perform moltiplication with a second activation
+            % value related to the angular error
+            act_ang_err = DecreasingBellShapedFunction(th_ang, th_ang + delta_ang, 0, 1, ang_err);
+            act_manip_err = IncreasingBellShapedFunction(th_manip, th_manip + delta_manip, 0, 1, abs(obj.err));
+            obj.A = eye(2) * (act_manip_err * act_ang_err);
+            
+        end 
     end
 end

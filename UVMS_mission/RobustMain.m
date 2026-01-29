@@ -1,3 +1,4 @@
+%% 
 % Add paths
 addpath('./simulation_scripts');
 addpath('./tools');
@@ -7,18 +8,21 @@ addpath('./tasks/');
 clc; clear; close all;
 
 % Simulation parameters
-dt = 0.005;
-endTime = 65;
+dt = 0.01;
+endTime = 70;
 % Initialize robot model and simulator
 robotModel = UvmsModel();          
 sim = UvmsSim(dt, robotModel, endTime);
 % Initialize Unity interface
 unity = UnityInterface("127.0.0.1");
 
+
+
 %% Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
 w_vehicle_goal_position = [10.5, 37.5, -38]';
+% w_vehicle_goal_position = [9.5, 38.5, -38]'; TEST
 w_vehicle_goal_orientation = [0, -0.06, 0.5];
 
 % Set goals in the robot model
@@ -33,26 +37,29 @@ robotModel.setGoal(...
 landing_altitude = 0.1;
 safe_altitude = 2.0;
 % Transitions trasholds (tuning)
-dist_threshold = 1e-2;                      % to wp [m]
-manip_threshold = -1e-2;
-alt_threshold = landing_altitude + 1e-2;    % landing [m]
+dist_threshold = 1e-1;                     % to wp [m]
+manip_threshold = 1e-1;
+ang_threshold = 0.1;
+alt_threshold = landing_altitude + 1e-2;   % landing [m]
 tool_threshold = 1e-2;                     % manipulation [m]
 % Parameters for manipulator
 arm_reach = 0.6;
-armBase_vehicle_dist = 1.1;
-correction_step = 0.1;
+armBase_vehicle_dist = 1.0;
+q_home = 2*(robotModel.jlmax + robotModel.jlmin)/3;
+% q_home = [0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]';
+mu_min = 0.015;
 % Task list
-task_target_attitude = TaskTargetAttitude();        % P1 % da cambiare in modo che punti verso il target
-task_to_altitude = TaskAltitudeControl(landing_altitude, "to_altitude"); % P2
-task_min_safe_altitude = TaskAltitudeControl(safe_altitude, "safe_mode"); % P3
-task_pose = TaskPoseControl();                             % P4
-task_horizontal_attitude = TaskHorizontalAttitude();             % P5
-% task_mantain_xy = TaskMantainxy();                                % P6
-task_tool = TaskToolControl();                                               % P7
-task_still_manip = TaskJointsPosition([0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]'); % P8
-task_manipulability_check = TaskManipulabilityCheck(arm_reach, armBase_vehicle_dist, manip_threshold);
+task_target_attitude = TaskTargetAlignment();
+task_to_altitude = TaskAltitudeControl(landing_altitude, "to_altitude"); 
+task_min_safe_altitude = TaskAltitudeControl(safe_altitude, "safe_mode"); 
+task_pose = TaskPoseControl();                             
+task_horizontal_attitude = TaskHorizontalAttitude();             
+task_tool = TaskToolControl();                                              
+task_still_manip = TaskJointsPosition(q_home);
+task_manipulability_check = TaskManipulabilityCheck(arm_reach, armBase_vehicle_dist);
 task_look_ahead = TaskLookAhead();
-
+task_dexterity = TaskDexterity(mu_min, robotModel);
+task_mantain_xy = TaskMantainxy();
 %---
 safe_wp_nav_set  = {
     task_min_safe_altitude,...
@@ -63,47 +70,44 @@ safe_wp_nav_set  = {
     };
 
 manipulability_check = {
-    task_still_manip, ...
-    task_target_attitude,...
-    task_manipulability_check, ...
     task_min_safe_altitude, ...
     task_horizontal_attitude, ...
+    task_still_manip, ...
+    task_target_attitude,...
+    task_manipulability_check, ... 
 };
 
 landing_set = {
     task_still_manip, ...
     task_to_altitude, ...
+    task_mantain_xy, ...
     task_manipulability_check, ...
     task_target_attitude,...
     task_horizontal_attitude, ...
     };
 
 manip_set = {
-    task_manipulability_check, ...
+    task_mantain_xy, ...
+    task_target_attitude,... 
     task_to_altitude,...
-    task_target_attitude,... % LA FA PRIMA DEL LANDING
     task_horizontal_attitude, ...
-    task_tool};
+    task_dexterity,...
+    task_tool, ...
+    };
 %---
-% unified_set = {task_min_safe_altitude, ... % safety
-%     task_still_manip, ...
-%     task_to_altitude, ...
-%     task_manipulability_check, ...
-%     task_target_attitude, ...
-%     task_horizonatal_attitude, ...
-%     task_look_ahead, ...
-%     task_pose, ...
-%     task_tool};
-
-unified_set = {task_min_safe_altitude, ... % safety
+unified_set = {
+    task_min_safe_altitude, ...
     task_still_manip, ...
     task_to_altitude, ...
     task_target_attitude, ...
     task_manipulability_check, ...
+    task_mantain_xy,...
     task_horizontal_attitude, ...
     task_look_ahead, ...
     task_pose, ...
-    task_tool};
+    task_dexterity,...
+    task_tool, ...
+    };
 
 %% Define actions and add to ActionManager
 actionManager = ActionManager();
@@ -127,6 +131,7 @@ logger = SimulationLogger(...
 %% Main simulation loop
 
 for step = 1:sim.maxSteps
+    logging_disp = mod(sim.loopCounter, round(1 / sim.dt));
     % 1. Receive altitude from Unity
     robotModel.altitude = unity.receiveAltitude(robotModel);
     
@@ -134,42 +139,43 @@ for step = 1:sim.maxSteps
     switch currentState
 
         case "Safe Navigation"
-            [~, lin] = CartError(robotModel.wTgv , robotModel.wTv);
-            horiz_dist_xy = norm(lin(1:2));
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
-                fprintf("WP distance: %.2f \n", horiz_dist_xy);
+            if logging_disp == 0
+                fprintf("WP distance: %.2f m\n", task_pose.err);
             end
-            if horiz_dist_xy < dist_threshold
+            if task_pose.err < dist_threshold % ma se nella simulazione non ci arriva mai, va bene così o deve essere nullo perchè equality
                 currentState = "Manipulability Check";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Waypoint reached. Start Manipulability Check \n', sim.time);
             end
-        case "Manipulability Check"
-            w_Tool_goal_XY = robotModel.goalPosition(1:2); % nodule
-            w_Vehicle_XY = robotModel.wTv(1:2,4);
-            dist_to_nodule = norm(w_Vehicle_XY - w_Tool_goal_XY);
-            manip_err = dist_to_nodule - (arm_reach + armBase_vehicle_dist);
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
-                fprintf("Distance to reachability: %.2f \n", manip_err);
+        case "Manipulability Check" % manipulability and alignment
+            if logging_disp == 0
+                fprintf("Distance to reachability: %.2f m\n", task_manipulability_check.err);
+                fprintf("Angular error to target: %.2f rad\n ", task_target_attitude.err);
             end
-            if manip_err > manip_threshold
+            if (abs(task_manipulability_check.err) < manip_threshold)  && (abs(task_target_attitude.err) < ang_threshold)
                 currentState = "Landing";
                 actionManager.setCurrentAction(currentState);
-                fprintf('t = %.2f s: Target in manipulation range. Start Landing\n', sim.time);
+                fprintf('t = %.2f s: Target in manipulation range. Start Landing \n', sim.time);
+                robotModel.stablePos = robotModel.wTv(:,:);
             end
-        case "Landing" % Check altitude and alignment
+        case "Landing"
+            if logging_disp == 0
+                fprintf("XY error = [%.2f %.2f] m\n", task_mantain_xy.err(1), task_mantain_xy.err(2));
+            end
             if robotModel.altitude <= alt_threshold
                 currentState = "Manipulation";
                 actionManager.setCurrentAction(currentState);
-                fprintf('t = %.2f s: Landing complete. Start Landing\n', sim.time);
+                fprintf('t = %.2f s: Landing complete. Start Manipulation \n', sim.time);
             end
             
         case "Manipulation"
             % veichle is still - only manipulator movement. 
             [~, lin] = CartError(robotModel.vTg , robotModel.vTt);
             tool_dist = norm(lin);
-            if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+            if logging_disp == 0
                 fprintf("Target distance: %.3f \n", tool_dist);
+                fprintf("Dexterity: mu = %.4f \n", task_dexterity.current_mu)
+                fprintf("XY error = [%.2f %.2f] m\n", task_mantain_xy.err(1), task_mantain_xy.err(2));
                 if tool_dist < tool_threshold
                     fprintf("Target reached - Mission complete \n")
                 end
@@ -192,10 +198,10 @@ for step = 1:sim.maxSteps
     logger.update(sim.time, sim.loopCounter);
 
     % 6. Optional debug prints
-    if mod(sim.loopCounter, round(1 / sim.dt)) == 0
+    if logging_disp == 0
         fprintf('t = %.2f s\n', sim.time);
-        fprintf('alt = %.2f m\n', robotModel.altitude);
-        fprintf('pose = [x: %.2f y: %.2f z: %.2f] m\n', robotModel.wTv(1, 4), robotModel.wTv(2, 4), robotModel.wTv(3, 4))
+        fprintf('Alt = %.2f m\n', robotModel.altitude);
+        fprintf('Pose : \n \t x = %.2f m\n \t y = %.2f m\n \t z = %.2f m\n]\n', robotModel.wTv(1, 4), robotModel.wTv(2, 4), robotModel.wTv(3, 4))
     end
 
     % 7. Optional real-time slowdown

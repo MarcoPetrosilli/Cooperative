@@ -66,11 +66,30 @@ classdef SimulationLogger < handle
 
             % Optional: plot task activations
             figure(3);
+            n_cols = 3;
+            n = ceilDiv(size(obj.a,3),n_cols);
             for i = 1:size(obj.a,3)
-                subplot(size(obj.a,3),1,i);
+                subplot(n ,n_cols,i);
                 plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                ylim([0,1]);
+                grid on;
                 title(['Task', num2str(i), obj.task_set{i}.id]);
             end
-        end
+
+
+            % % Inseriti da me
+            % figure(3)
+            % for i = 1:5
+            %     subplot(5,1,i);
+            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     title(['Task', num2str(i), obj.task_set{i}.id]);
+            % end
+            % figure(4)
+            % for i = 6:11
+            %     subplot(6,1,i-5);
+            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     title(['Task', num2str(i), obj.task_set{i}.id]);
+            % end
+        end 
     end
 end
