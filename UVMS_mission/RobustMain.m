@@ -9,7 +9,7 @@ clc; clear; close all;
 
 % Simulation parameters
 dt = 0.01;
-endTime = 60;
+endTime = 70;
 % Initialize robot model and simulator
 robotModel = UvmsModel();          
 sim = UvmsSim(dt, robotModel, endTime);
@@ -22,6 +22,7 @@ unity = UnityInterface("127.0.0.1");
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
 w_vehicle_goal_position = [10.5, 37.5, -38]';
+% w_vehicle_goal_position = [9.5, 38.5, -38]'; TEST
 w_vehicle_goal_orientation = [0, -0.06, 0.5];
 
 % Set goals in the robot model
@@ -44,6 +45,9 @@ tool_threshold = 1e-2;                     % manipulation [m]
 % Parameters for manipulator
 arm_reach = 0.6;
 armBase_vehicle_dist = 1.0;
+q_home = 2*(robotModel.jlmax + robotModel.jlmin)/3;
+% q_home = [0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]';
+mu_min = 0.015;
 % Task list
 task_target_attitude = TaskTargetAlignment();
 task_to_altitude = TaskAltitudeControl(landing_altitude, "to_altitude"); 
@@ -51,10 +55,11 @@ task_min_safe_altitude = TaskAltitudeControl(safe_altitude, "safe_mode");
 task_pose = TaskPoseControl();                             
 task_horizontal_attitude = TaskHorizontalAttitude();             
 task_tool = TaskToolControl();                                              
-task_still_manip = TaskJointsPosition([0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]');
+task_still_manip = TaskJointsPosition(q_home);
 task_manipulability_check = TaskManipulabilityCheck(arm_reach, armBase_vehicle_dist);
 task_look_ahead = TaskLookAhead();
-
+task_dexterity = TaskDexterity(mu_min, robotModel);
+task_mantain_xy = TaskMantainxy();
 %---
 safe_wp_nav_set  = {
     task_min_safe_altitude,...
@@ -75,16 +80,18 @@ manipulability_check = {
 landing_set = {
     task_still_manip, ...
     task_to_altitude, ...
+    task_mantain_xy, ...
     task_manipulability_check, ...
     task_target_attitude,...
     task_horizontal_attitude, ...
     };
 
 manip_set = {
-    task_manipulability_check, ...
+    task_mantain_xy, ...
     task_target_attitude,... 
     task_to_altitude,...
     task_horizontal_attitude, ...
+    task_dexterity,...
     task_tool, ...
     };
 %---
@@ -94,9 +101,11 @@ unified_set = {
     task_to_altitude, ...
     task_target_attitude, ...
     task_manipulability_check, ...
+    task_mantain_xy,...
     task_horizontal_attitude, ...
     task_look_ahead, ...
     task_pose, ...
+    task_dexterity,...
     task_tool, ...
     };
 
@@ -147,13 +156,16 @@ for step = 1:sim.maxSteps
                 currentState = "Landing";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Target in manipulation range. Start Landing \n', sim.time);
+                robotModel.stablePos = robotModel.wTv(:,:);
             end
         case "Landing"
+            if logging_disp == 0
+                fprintf("XY error = [%.2f %.2f] m\n", task_mantain_xy.err(1), task_mantain_xy.err(2));
+            end
             if robotModel.altitude <= alt_threshold
                 currentState = "Manipulation";
                 actionManager.setCurrentAction(currentState);
                 fprintf('t = %.2f s: Landing complete. Start Manipulation \n', sim.time);
-                robotModel.stablePos = robotModel.wTv(1:2,4);
             end
             
         case "Manipulation"
@@ -162,6 +174,8 @@ for step = 1:sim.maxSteps
             tool_dist = norm(lin);
             if logging_disp == 0
                 fprintf("Target distance: %.3f \n", tool_dist);
+                fprintf("Dexterity: mu = %.4f \n", task_dexterity.current_mu)
+                fprintf("XY error = [%.2f %.2f] m\n", task_mantain_xy.err(1), task_mantain_xy.err(2));
                 if tool_dist < tool_threshold
                     fprintf("Target reached - Mission complete \n")
                 end

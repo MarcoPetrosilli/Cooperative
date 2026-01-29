@@ -65,33 +65,31 @@ classdef SimulationLogger < handle
             legend('xdot','ydot','zdot','omega_x','omega_y','omega_z');
 
             % Optional: plot task activations
-            % figure(3);
-            % for i = 1:size(obj.a,3)
-            %     subplot(size(obj.a,3),1,i);
+            figure(3);
+            n_cols = 3;
+            n = ceilDiv(size(obj.a,3),n_cols);
+            for i = 1:size(obj.a,3)
+                subplot(n ,n_cols,i);
+                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+                ylim([0,1]);
+                grid on;
+                title(['Task', num2str(i), obj.task_set{i}.id]);
+            end
+
+
+            % % Inseriti da me
+            % figure(3)
+            % for i = 1:5
+            %     subplot(5,1,i);
             %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
             %     title(['Task', num2str(i), obj.task_set{i}.id]);
             % end
-
-
-            % Inseriti da me
-            figure(3)
-            for i = 1:3
-                subplot(3,1,i);
-                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-                title(['Task', num2str(i), obj.task_set{i}.id]);
-            end
-            figure(4)
-            for i = 4:6
-                subplot(3,1,i-3);
-                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-                title(['Task', num2str(i), obj.task_set{i}.id]);
-            end
-            figure(5)
-            for i = 7:9
-                subplot(3,1,i-6);
-                plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
-                title(['Task', num2str(i), obj.task_set{i}.id]);
-            end
-        end
+            % figure(4)
+            % for i = 6:11
+            %     subplot(6,1,i-5);
+            %     plot(obj.t, squeeze(obj.a(:, :, i))', 'LineWidth', 1);
+            %     title(['Task', num2str(i), obj.task_set{i}.id]);
+            % end
+        end 
     end
 end

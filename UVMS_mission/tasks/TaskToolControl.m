@@ -16,7 +16,6 @@ classdef TaskToolControl < Task
             Jt_a  = Ste * [robot.vTb(1:3,1:3) zeros(3,3); zeros(3,3) robot.vTb(1:3,1:3)] * bJe;
             Jt_v = zeros(6);
             obj.J = [Jt_a Jt_v];
-            size(obj.J)
         end
         
         function updateActivation(obj, robot)

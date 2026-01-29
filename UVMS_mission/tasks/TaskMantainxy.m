@@ -1,7 +1,6 @@
 classdef TaskMantainxy < Task   
     properties
         id = "Mantain XY";
-        XY;
         err
     end
 
@@ -9,10 +8,8 @@ classdef TaskMantainxy < Task
     methods
         
         function updateReference(obj, robot)
-            obj.XY = robot.stablePos(1:2,4);
-            actualXY = robot.wTv(1:2,4);
-            obj.err = actualXY - obj.XY;
-            obj.xdotbar = 0.2 * obj.err;
+            [~ , obj.err] = CartError(robot.stablePos, robot.wTv);
+            obj.xdotbar = 0.8 * obj.err(1:2);
             obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
         end
         function updateJacobian(obj, robot)
@@ -20,7 +17,7 @@ classdef TaskMantainxy < Task
         end
         
         function updateActivation(obj, robot)
-            obj.A = eye(2) * IncreasingBellShapedFunction(0, 0.1, 0, 1, obj.err);
+            obj.A = eye(2);
         end
     end
 end

@@ -69,15 +69,17 @@ classdef UvmsModel < handle
                     obj.vTb = [rotation(0, 0, pi) [0.85; 0; -0.42]; 0 0 0 1];
             end
 
-            % Initialize default state
-            % obj.q      = [-0.0031 0 0.0128 -1.2460 0.0137 0.0853 -pi/2]';
-            obj.q      = [0.0 0.0 0.0 -pi/2 0.0 -pi/2 0.0]';
-            % obj.eta    = [15.5 29.5 -37.8 -pi/3 pi/3 pi/2]'; % w_vehicle_goal_position = [10.5, 37.5, -38]';
-            obj.eta    = [12.5 35.5 -37.8 -pi/3 pi/3 pi/2]'; % TEST
-            
             % Default limits
             obj.jlmin  = [-2.9;-1.6;-2.9;-2.95;-2.9;-1.65;-2.8];
             obj.jlmax  = [ 2.9; 1.65; 2.9; 0.01; 2.9; 1.25; 2.8];
+
+            % Initialize default state
+            % obj.q      = [-0.0031 0 0.0128 -1.2460 0.0137 0.0853 -pi/2]';
+            obj.q      = 2*(obj.jlmax + obj.jlmin)/3';
+            obj.eta    = [15.5 29.5 -37.8 -pi/3 pi/3 pi/2]'; % w_vehicle_goal_position = [10.5, 37.5, -38]';
+            % obj.eta    = [12.5 35.5 -37.8 -pi/3 pi/3 pi/2]'; % TEST
+            
+            obj.stablePos = zeros(4,4);
 
             % Initialize transformations
             obj.wTv = eye(4);

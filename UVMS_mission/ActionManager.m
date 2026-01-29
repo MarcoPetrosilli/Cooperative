@@ -89,7 +89,6 @@ classdef ActionManager < handle
             ydotbar = zeros(13,1);
             Qp = eye(13);
             for i = 1:length(tasks)
-                i
                 [Qp, ydotbar] = iCAT_task(tasks{i}.A, tasks{i}.J, Qp, ydotbar, tasks{i}.xdotbar, 1e-4, 0.01, 10);
             end
 

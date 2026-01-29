@@ -4,12 +4,13 @@ classdef TaskDexterity < Task
         mu_min;
         current_mu;
         q_center = [];
+        err;
     end
     
     methods
-        function obj = TaskDexterity(mu_min)
+        function obj = TaskDexterity(mu_min, robot)
             obj.mu_min = mu_min;
-            obj.q_center = (robot.jlmax + jlmin) / 2;
+            obj.q_center = (robot.jlmax + robot.jlmin) / 2;
         end
         
         function updateReference(obj, robot)
@@ -18,29 +19,19 @@ classdef TaskDexterity < Task
             obj.err = obj.mu_min - obj.current_mu;
             
             q_error = obj.q_center - robot.q;
-            % obj.xdotbar = 0.1 * 
-            % Se siamo in zona critica, generiamo una velocità di allontanamento.
-            % Poiché non sappiamo a priori "in che direzione" muoverci per 
-            % aumentare la mu, usiamo una strategia di massimizzazione del gradiente
-            % o, più semplicemente, spingiamo il drone verso il target.
 
-            if obj.err > 0
-                % Direzione: dal veicolo verso il target (per accorciare la distanza del braccio)
-                dir_to_target = robot.goalPosition(1:2) - robot.wTv(1:2,4);
-                obj.xdotbar = 0.5 * [dir_to_target; 0];
-                obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.1);
-            end
+            obj.xdotbar = 1.0 * q_error;
+            obj.xdotbar = Saturate(obj.xdotbar(:), 0.2);
         end
         
         function updateJacobian(obj, robot)
-            obj.J = [zeros(2,7), robot.wTv(1:2,1:3), zeros(2,3)];
+            obj.J = [eye(7) zeros(7,6)];
         end
         
         function updateActivation(obj, robot)
-            delta = 1e-2;
-            act = DecreasingBellShapedFunction(0, delta, 0, 1, obj.err);
-            
-            obj.A = eye(2) * act;
+            delta = 0.01;
+            th = 0;
+            obj.A = eye(7) * IncreasingBellShapedFunction(th,th + delta, 0, 1, obj.err);
         end
     end
 end

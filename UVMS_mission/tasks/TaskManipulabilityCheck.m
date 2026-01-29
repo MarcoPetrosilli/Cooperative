@@ -24,7 +24,7 @@ classdef TaskManipulabilityCheck < Task
 
             dist_to_nodule = norm(lin_err(1:2));
             obj.err = dist_to_nodule - (obj.arm_length + obj.armBase_distance);
-            obj.xdotbar = 0.8 * lin_err(1:2);
+            obj.xdotbar = 15 * lin_err(1:2);
             obj.xdotbar(1:2) = Saturate(obj.xdotbar(1:2), 0.2);
             
         
@@ -47,7 +47,7 @@ classdef TaskManipulabilityCheck < Task
             th_ang = 0;
             th_manip = 0;
             delta_ang = 3*pi/5; 
-            delta_manip = 2e-1;
+            delta_manip = 1.0; % 0.1
             % We prefer the robot moving when it is aligned with the
             % target, so we perform moltiplication with a second activation
             % value related to the angular error
