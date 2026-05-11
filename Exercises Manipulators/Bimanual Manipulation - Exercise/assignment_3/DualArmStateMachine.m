@@ -9,6 +9,7 @@ classdef DualArmStateMachine < handle
 
     properties (SetAccess = public)
         robot_ID
+        path_idx = 1
     end
     
     properties (Constant)

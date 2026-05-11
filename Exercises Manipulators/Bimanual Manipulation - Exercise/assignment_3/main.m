@@ -8,7 +8,7 @@ function main()
 
     % --- Simulation Parameters ---
     dt = 0.005;
-    end_time = 15;
+    end_time = 30;
 
     xl = [];
     xr = [];
@@ -43,12 +43,12 @@ function main()
     arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos-grasp_offset,rotation(pi, -deg2rad(20), 0));
     arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+grasp_offset,rotation(0, pi+deg2rad(20), 0));
 
-    bm_sim.lawnmower_path = PathGeneratorLawnmower;
+    bm_sim.lawnmower_path = PathGeneratorLawnmower(bm_sim,arm1,arm2);
 
-    wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.48]'; 0 0 0 1];
- 
-    arm1.set_obj_goal(wTog);
-    arm2.set_obj_goal(wTog);
+    % wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.48]'; 0 0 0 1];
+    % 
+    % arm1.set_obj_goal(wTog);
+    % arm2.set_obj_goal(wTog);
 
     % --- Define Tasks ---
     % left_tool_task = tool_task("L", "LT");
@@ -57,8 +57,8 @@ function main()
     % right_tool_task_2 = tool_task("R", "RT2");
     left_tool_task = path_task("L", "LT");
     right_tool_task = path_task("R", "RT");
-    left_path_task = path_task("L", "PT");
-    right_path_task = path_task("R", "PT");
+    left_path_task = path_task("L", "LP");
+    right_path_task = path_task("R", "RP");
     left_min_altitude = ee_altitude_task("L", "LA", 0.5);
     right_min_altitude = ee_altitude_task("R", "RA", 0.15);
     left_joint_limits_task = joint_limits_task("L", "LL");
@@ -72,7 +72,7 @@ function main()
     l_move_grasped_obj_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_path_task};
     l_final_set = {left_min_altitude};
     % l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
-    l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_path_task};
+    l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude,left_tool_task, left_path_task};
 
     % --- Define Action Sets (RIGHT) ---
     r_go_to_grasp_set = {right_joint_limits_task, right_min_altitude, right_tool_task};
@@ -80,7 +80,7 @@ function main()
     r_move_grasped_obj_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_path_task};
     r_final_set = {right_min_altitude};
     % r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
-    r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_path_task};
+    r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude,right_tool_task, right_path_task};
 
     % --- Initialize LEFT Action Manager ---
     l_actionManager = ActionManager();

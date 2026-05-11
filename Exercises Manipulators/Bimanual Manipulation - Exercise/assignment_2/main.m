@@ -7,7 +7,7 @@ function main()
     clc;clear;close all; 
     %Simulation Parameters
     dt = 0.005;
-    end_time = 50;
+    end_time = 40;
     
     dist = [];
     X_o1 = [];
@@ -64,7 +64,7 @@ function main()
     right_tool_task = path_task("R", "RT");
     left_path_task = path_task("L", "LP");
     right_path_task = path_task("R", "RP");
-    left_min_altitude=ee_altitude_task("L","LA",0.15);
+    left_min_altitude=ee_altitude_task("L","LA",0.4);
     right_min_altitude=ee_altitude_task("R","RA",0.15);
     left_joint_limits_task=joint_limits_task("L","LL");
     right_joint_limits_task=joint_limits_task("R","RL");
