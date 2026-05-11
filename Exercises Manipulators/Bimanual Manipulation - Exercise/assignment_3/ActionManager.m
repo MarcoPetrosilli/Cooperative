@@ -43,7 +43,7 @@ classdef ActionManager < handle
                 tasks_id{i} = tasks{i}.task_name;
             end
             
-
+            % Calcolo Alpha (Blending)
             if obj.actionSwitchTime ~= 0
                 t = toc(obj.actionSwitchTime);
                 duration = obj.transitionDuration;
@@ -77,7 +77,7 @@ classdef ActionManager < handle
                 task.updateJacobian(bm_system);
                 task.updateActivation(bm_system);
                 
-               
+                % Applicazione del Blending
                 if inCurrent(i) && ~inPrev(i) && ~task.constrained
                     task.A = task.A * alpha_in;
                 elseif ~inCurrent(i) && inPrev(i) && ~task.constrained
@@ -90,13 +90,14 @@ classdef ActionManager < handle
                 obj.activation_history.(task.task_name)(end+1, :) = current_act;
             end
             
-  
+            % ... (Resto della logica per bim_task_ID e ICAT invariata) ...
             if actual_arm.robot_ID == "L"
                 bim_task_ID = find(cellfun(@(x) x.task_name == "LC", tasks), 1);        
             elseif actual_arm.robot_ID == "R"
                 bim_task_ID = find(cellfun(@(x) x.task_name == "RC", tasks), 1);
             end
             
+             % FIX: usa l'elemento specifico
             ydotbar = obj.perform_ICAT(tasks);
             actual_arm.X_o = actual_arm.wJo*ydotbar;
             
@@ -104,14 +105,18 @@ classdef ActionManager < handle
 
 
             if actual_arm.robot_ID == "L"
-                tool_task_ID = find(cellfun(@(x) x.task_name == "LT2", tasks), 1);        
+                % tool_task_ID = find(cellfun(@(x) x.task_name == "LT2", tasks), 1);        
+                tool_task_ID = find(cellfun(@(x) x.task_name == "LP", tasks), 1);
             elseif actual_arm.robot_ID == "R"
-                tool_task_ID = find(cellfun(@(x) x.task_name == "RT2", tasks), 1);
+                % tool_task_ID = find(cellfun(@(x) x.task_name == "RT2", tasks), 1);
+                tool_task_ID = find(cellfun(@(x) x.task_name == "RP", tasks), 1);
             end
          
             tasks{tool_task_ID}.A = zeros(6);
          
         end
+        
+        % ... (Altri metodi come coordinate_velocities, perform_ICAT rimangono uguali) ...
         
 
         function ydotbar = perform_ICAT(obj, tasks)
@@ -128,8 +133,10 @@ classdef ActionManager < handle
        
         function plotActivations(obj, dt, arm)
 
+            % Tutti i task salvati
             task_names = fieldnames(obj.activation_history);
         
+            % Rimuove LC e RC
             task_names = setdiff(task_names, {'LC','RC'}, 'stable');
         
             num_tasks = length(task_names);
@@ -158,7 +165,7 @@ classdef ActionManager < handle
                 subplot(rows, cols, i);
                 plot(time_vector, data, 'LineWidth', 1.5);
                 xline(arm.tg)
-                xline(arm.tf)
+                % xline(arm.tf)
         
                 title(name, 'Interpreter', 'none', 'FontWeight', 'bold');
                 xlabel('Time [s]');

@@ -7,7 +7,7 @@ function main()
     clc;clear;close all; 
     %Simulation Parameters
     dt = 0.005;
-    end_time = 50;
+    end_time = 15;
     
     dist = [];
     X_o1 = [];
@@ -34,36 +34,33 @@ function main()
     
     %Initialize Bimanual Simulator Class
     bm_sim=bimanual_sim(dt,arm1,arm2,end_time);
-
+    
+    
     %Define Object Shape and origin Frame
     obj_length = 0.1;
     w_obj_pos = [0.5 0 0.59]';
     w_obj_ori = rotation(0,0,0);
     
     grasp_offset = [(obj_length/2)-0.005 0 0]';
+
     
     %Set goal frames for left and right arm, based on object frame
     %TO DO: Set arm goal frame based on object frame.
     arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos-grasp_offset,rotation(pi, -pi/6, 0));
     arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+grasp_offset,rotation(0, pi+pi/6, 0));
     
-    bm_sim.lawnmower_path = PathGeneratorLawnmower(bm_sim, arm1, arm2);
-
+    
     %Define Object goal frame (Cooperative Motion)
-    % wTog=[rotation(0,0,0) [0.65, -0.35, 0.28]'; 0 0 0 1];
-    % arm1.set_obj_goal(wTog)
-    % arm2.set_obj_goal(wTog)
+    wTog=[rotation(0,0,0) [0.65, -0.35, 0.28]'; 0 0 0 1];
+    arm1.set_obj_goal(wTog)
+    arm2.set_obj_goal(wTog)
     
     
     %Define Tasks, input values(Robot type(L,R,BM), Task Name)
-    % left_tool_task = tool_task("L", "LT");
-    % right_tool_task = tool_task("R", "RT");
-    % left_tool_task_2 = tool_task("L", "LT2");
-    % right_tool_task_2 = tool_task("R", "RT2");
-    left_tool_task = path_task("L", "LT");
-    right_tool_task = path_task("R", "RT");
-    left_path_task = path_task("L", "LP");
-    right_path_task = path_task("R", "RP");
+    left_tool_task=tool_task("L","LT");
+    right_tool_task=tool_task("R","RT");
+    left_tool_task_2=tool_task("L","LT2");
+    right_tool_task_2=tool_task("R","RT2");
     left_min_altitude=ee_altitude_task("L","LA",0.15);
     right_min_altitude=ee_altitude_task("R","RA",0.15);
     left_joint_limits_task=joint_limits_task("L","LL");
@@ -75,16 +72,12 @@ function main()
     final_set = {left_min_altitude, right_min_altitude};
 
     if CONSTRAINT_ON 
-        % move_grasped_obj_set={bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task_2, right_tool_task_2};
-        move_grasped_obj_set={bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_path_task, right_path_task};
-        % unified_set = {bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_tool_task_2, right_tool_task_2};
-        unified_set = {bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_path_task, right_path_task};
+        move_grasped_obj_set={bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task_2, right_tool_task_2};
+        unified_set = {bim_constraint_task, left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_tool_task_2, right_tool_task_2};
         
     else
-        % move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task_2, right_tool_task_2};
-        move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_path_task, right_path_task};
-        % unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_tool_task_2, right_tool_task_2};
-        unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_path_task, right_path_task};
+        move_grasped_obj_set={left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task_2, right_tool_task_2};
+        unified_set = {left_joint_limits_task, right_joint_limits_task, left_min_altitude,right_min_altitude,left_tool_task,right_tool_task, left_tool_task_2, right_tool_task_2};
     end
     
     %Load Action Manager Class and load actions
@@ -131,7 +124,7 @@ function main()
         % 7. Optional real-time slowdown
         SlowdownToRealtime(dt);
     
-        StateMachine.update(arm1, arm2, actionManager, t, bm_sim);
+        StateMachine.update(arm1, arm2, actionManager, t);
 
         [a, v] = CartError(arm1.wTt , arm2.wTt);
         dist = [dist norm(v)];
@@ -156,7 +149,6 @@ function main()
     xline(arm1.tf)
     hold off
     ylabel('Distance');
-    title('Distance');
 
     tg_pos = find(t == arm1.tg);
     % tf_pos = find(t == arm1.tf);
@@ -173,8 +165,8 @@ function main()
     plot(X_o2_1);
     hold off
     ylabel('X_ang');
-    legend('Xo_l', 'Xo_r');
-    title('X_ang');
+    legend('Xo1', 'Xo2');
+
     X_o1_2 = timeseries(X_o1_(2,:), t);
     X_o2_2 = timeseries(X_o2_(2,:), t);
     subplot(2,3,2);
@@ -182,9 +174,9 @@ function main()
     hold on;
     plot(X_o2_2);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Y_ang');
-    title('X_ang');
+    legend('Xo1', 'Xo2');
+    title('Y_ang');
+
     X_o1_3 = timeseries(X_o1_(3,:), t);
     X_o2_3 = timeseries(X_o2_(3,:), t);
     subplot(2,3,3);
@@ -192,8 +184,7 @@ function main()
     hold on;
     plot(X_o2_3);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Z_ang');
+    legend('Xo1', 'Xo2');
     title('Z_ang');
 
     X_o1_4 = timeseries(X_o1_(4,:), t);
@@ -203,9 +194,9 @@ function main()
     hold on;
     plot(X_o2_4);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('X_lin');
+    legend('Xo1', 'Xo2');
     title('X_lin');
+
     X_o1_5 = timeseries(X_o1_(5,:), t);
     X_o2_5 = timeseries(X_o2_(5,:), t);
     subplot(2,3,5);
@@ -213,9 +204,9 @@ function main()
     hold on;
     plot(X_o2_5);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Y_lin');
+    legend('Xo1', 'Xo2');
     title('Y_lin');
+
     X_o1_6 = timeseries(X_o1_(6,:), t);
     X_o2_6 = timeseries(X_o2_(6,:), t);
     subplot(2,3,6);
@@ -223,7 +214,6 @@ function main()
     hold on;
     plot(X_o2_6);
     hold off
-    legend('Xo_l', 'Xo_r');
-    ylabel('Z_lin');
+    legend('Xo1', 'Xo2');
     title('Z_lin');
 end

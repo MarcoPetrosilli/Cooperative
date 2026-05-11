@@ -12,7 +12,7 @@ classdef joint_limits_task < Task
             obj.task_name=taskID;
         end
 
-        function updateReference(obj, robot_system, StateMachine)
+        function updateReference(obj, robot_system,grasped)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
@@ -24,8 +24,8 @@ classdef joint_limits_task < Task
 
             
             for i = 1:7
-                dist_min = -obj.lambda * (robot.jlmin(i) - robot.q(i));
-                dist_max = obj.lambda * (robot.jlmax(i) - robot.q(i));
+                dist_min = obj.lambda * (robot.jlmin(i) + obj.threshold - robot.q(i));
+                dist_max = obj.lambda * (robot.jlmax(i) - obj.threshold - robot.q(i));
         
                 if abs(dist_min) < obj.threshold
                     obj.xdotbar(i) = dist_min;
@@ -38,7 +38,7 @@ classdef joint_limits_task < Task
 
         end
         
-        function updateJacobian(obj, robot_system)
+        function updateJacobian(obj, robot_system, StateMachine)
 
             if obj.ID=='L'
                 obj.J= [eye(7), zeros(7,7)];

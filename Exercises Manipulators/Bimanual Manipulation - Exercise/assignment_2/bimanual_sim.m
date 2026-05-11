@@ -10,6 +10,7 @@ classdef bimanual_sim < handle
         time          %Current Simulation time
         maxSteps      %Maximum number of simulation steps
         loopCounter   %Loop counter for logging
+        lawnmower_path
     end
 
     methods

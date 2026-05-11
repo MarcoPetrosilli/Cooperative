@@ -6,8 +6,11 @@ classdef DualArmStateMachine < handle
         transition = false;
     end
     
-    properties (Constant)
+    properties (SetAccess = public)
+        path_idx = 1;
+    end
 
+    properties (Constant)
         STATE_APPROACHING = "APPROACHING" 
         STATE_GRASPED     = "GRASPED"     
         STATE_FINAL       = "FINAL"       
@@ -27,7 +30,7 @@ classdef DualArmStateMachine < handle
             actionManager.setCurrentAction("go_to_grasp");
         end
         
-        function update(obj, arm1, arm2, actionManager, t)
+        function update(obj, arm1, arm2, actionManager, t, bm_sim)
             
             targetReached = obj.checkTargetReached(arm1, arm2);
 
@@ -37,6 +40,8 @@ classdef DualArmStateMachine < handle
                     if targetReached
                         disp(['Rot Error at Grasp: ', num2str(norm(arm1.rot_to_goal))]);
                        
+                        % bm_sim.lawnmower_path = PathGeneratorLawnmower(bm_sim, arm1, arm2);
+
                         obj.State = obj.STATE_GRASPED;
                         fprintf('State Transition: APPROACHING -> GRASPED\n');
                     end
@@ -58,6 +63,7 @@ classdef DualArmStateMachine < handle
                     end
                     
                 case obj.STATE_FINAL
+                    % Task finished
 
                     if obj.transition
                         actionManager.setCurrentAction("final");
@@ -70,8 +76,6 @@ classdef DualArmStateMachine < handle
         end
         
         function isReached = checkTargetReached(obj, arm1, arm2)
-
-            
             dist1 = norm(arm1.dist_to_goal) < obj.Tolerance;
             dist2 = norm(arm2.dist_to_goal) < obj.Tolerance;
             rot1  = norm(arm1.rot_to_goal)  < obj.Tolerance;

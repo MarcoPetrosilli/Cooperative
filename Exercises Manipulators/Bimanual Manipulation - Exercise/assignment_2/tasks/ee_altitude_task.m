@@ -1,6 +1,9 @@
-classdef ee_altitude_task < Task    
+classdef ee_altitude_task < Task
+    %EE_ALTITUDE_TASK Summary of this class goes here
+    %   Detailed explanation goes here
+    
     properties
-        desired_altitude;
+        desired_altitude
         altitude
         constrained = false
     end
@@ -27,7 +30,7 @@ classdef ee_altitude_task < Task
          obj.xdotbar = Saturate(obj.xdotbar, 0.3);
 
         end
-        function updateJacobian(obj,robot_system)
+        function updateJacobian(obj,robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')

@@ -1,7 +1,3 @@
-%Petrosilli Marco 7812048
-%Lovecchio Marco 7647356
-%Marmolino Giorgio 7721100
-
 function main()
     % Add path
     addpath('./simulation_scripts');
@@ -44,10 +40,10 @@ function main()
 
     grasp_offset = [(obj_length/2)-0.005 0 0]';
 
-    %Set goal frames for left and right arm, based on object frame
-
     arm1.setGoal(w_obj_pos,w_obj_ori,w_obj_pos-grasp_offset,rotation(pi, -deg2rad(20), 0));
     arm2.setGoal(w_obj_pos,w_obj_ori,w_obj_pos+grasp_offset,rotation(0, pi+deg2rad(20), 0));
+
+    bm_sim.lawnmower_path = PathGeneratorLawnmower;
 
     wTog = [rotation(0, 0, 0) [0.6, 0.4, 0.48]'; 0 0 0 1];
  
@@ -55,11 +51,15 @@ function main()
     arm2.set_obj_goal(wTog);
 
     % --- Define Tasks ---
-    left_tool_task = tool_task("L", "LT");
-    right_tool_task = tool_task("R", "RT");
-    left_tool_task_2 = tool_task("L", "LT2");
-    right_tool_task_2 = tool_task("R", "RT2");
-    left_min_altitude = ee_altitude_task("L", "LA", 0.15);
+    % left_tool_task = tool_task("L", "LT");
+    % right_tool_task = tool_task("R", "RT");
+    % left_tool_task_2 = tool_task("L", "LT2");
+    % right_tool_task_2 = tool_task("R", "RT2");
+    left_tool_task = path_task("L", "LT");
+    right_tool_task = path_task("R", "RT");
+    left_path_task = path_task("L", "PT");
+    right_path_task = path_task("R", "PT");
+    left_min_altitude = ee_altitude_task("L", "LA", 0.5);
     right_min_altitude = ee_altitude_task("R", "RA", 0.15);
     left_joint_limits_task = joint_limits_task("L", "LL");
     right_joint_limits_task = joint_limits_task("R", "RL");
@@ -68,15 +68,19 @@ function main()
 
     % --- Define Action Sets (LEFT) ---
     l_go_to_grasp_set = {left_joint_limits_task, left_min_altitude, left_tool_task};
-    l_move_grasped_obj_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task_2};
+    % l_move_grasped_obj_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task_2};
+    l_move_grasped_obj_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_path_task};
     l_final_set = {left_min_altitude};
-    l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
+    % l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_tool_task_2};
+    l_unified_set = {left_coop_constraint_task, left_joint_limits_task, left_min_altitude, left_tool_task, left_path_task};
 
     % --- Define Action Sets (RIGHT) ---
     r_go_to_grasp_set = {right_joint_limits_task, right_min_altitude, right_tool_task};
-    r_move_grasped_obj_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task_2};
+    % r_move_grasped_obj_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task_2};
+    r_move_grasped_obj_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_path_task};
     r_final_set = {right_min_altitude};
-    r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
+    % r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_tool_task_2};
+    r_unified_set = {right_coop_constraint_task, right_joint_limits_task, right_min_altitude, right_tool_task, right_path_task};
 
     % --- Initialize LEFT Action Manager ---
     l_actionManager = ActionManager();
@@ -167,21 +171,30 @@ function main()
     fprintf('Plotting Right Arm Activations...\n');
     r_actionManager.plotActivations(dt, arm2);
 
-    % Plotting
-    action = 1;
-    tasks = [1];
-    logger.plotAll(action, tasks);
-    
+    % % Plotting
+    % action = 1;
+    % tasks = [1];
+    % logger.plotAll(action, tasks);
+    % 
     t = 0:dt:end_time;
     d = timeseries(dist, t);
     figure;
     plot(d);
     hold on
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     ylabel('Distance (m)');
     title('Distance');
+
+    % tg_pos = find(t == arm1.tg);
+    % tf_pos = find(t == arm1.tf);
+    % t = t(tg_pos:end);
+    % X_o1 = X_o1(:, tg_pos:end);
+    % X_o2 = X_o2(:, tg_pos:end);
+    % xl = xl(:, tg_pos:end);
+    % xr = xr(:, tg_pos:end);
+    % Xo_12_arm1 = Xo_12_arm1(:, tg_pos:end);
 
     X_o1_1 = timeseries(X_o1(1,:), t);
     X_o2_1 = timeseries(X_o2(1,:), t);
@@ -195,7 +208,7 @@ function main()
     plot(X_o2_1);
     plot(Xo_12_arm1_1);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('X_ang');
@@ -212,7 +225,7 @@ function main()
     plot(X_o2_2);
     plot(Xo_12_arm1_2);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('Y_ang');
@@ -229,7 +242,7 @@ function main()
     plot(X_o2_3);
     plot(Xo_12_arm1_3);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('Z_ang');
@@ -246,7 +259,7 @@ function main()
     plot(X_o2_4);
     plot(Xo_12_arm1_4);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('X_lin');
@@ -263,7 +276,7 @@ function main()
     plot(X_o2_5);
     plot(Xo_12_arm1_5);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('Y_lin');
@@ -280,7 +293,7 @@ function main()
     plot(X_o2_6);
     plot(Xo_12_arm1_6);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo_l', 'Xo_r', 'Xo12');
     title('Z_lin');
@@ -293,7 +306,7 @@ function main()
     plot(xl_1);
     plot(xr_1);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('X_ang');
@@ -305,7 +318,7 @@ function main()
     plot(xl_2);
     plot(xr_2);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('Y_ang');
@@ -317,7 +330,7 @@ function main()
     plot(xl_3);
     plot(xr_3);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('Z_ang');
@@ -329,7 +342,7 @@ function main()
     plot(xl_4);
     plot(xr_4);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('X_lin');
@@ -341,7 +354,7 @@ function main()
     plot(xl_5);
     plot(xr_5);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('Y_lin');
@@ -353,7 +366,7 @@ function main()
     plot(xl_6);
     plot(xr_6);
     xline(arm1.tg)
-    xline(arm1.tf)
+    % xline(arm1.tf)
     hold off
     legend('Xo12', 'xl', 'xr');
     title('Z_lin');

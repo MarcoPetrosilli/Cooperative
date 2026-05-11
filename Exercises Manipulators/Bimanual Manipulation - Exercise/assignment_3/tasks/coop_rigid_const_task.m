@@ -1,5 +1,5 @@
 classdef coop_rigid_const_task < Task   
-
+    %Tool position control for a single arm
     properties
         constrained = true
     end

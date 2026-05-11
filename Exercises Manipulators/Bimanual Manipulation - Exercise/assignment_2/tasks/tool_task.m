@@ -1,4 +1,3 @@
-
 classdef tool_task < Task   
     %Tool position control for a single arm
     properties
@@ -38,7 +37,7 @@ classdef tool_task < Task
             obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end
 
-        function updateJacobian(obj,robot_system)
+        function updateJacobian(obj,robot_system, StateMachine)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
             elseif(obj.ID=='R')
